@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knight's Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="crt-overlay" aria-hidden="true"></div>
+
+<main class="arcade-cabinet">
+  <h1 class="title">KNIGHT&rsquo;S JOURNEY</h1>
+
+  <div class="stats-bar" id="stats-bar">
+    <span class="stat">HP <span id="stat-hp">10</span></span>
+    <span class="stat">GOLD <span id="stat-gold">0</span></span>
+    <span class="stat">ITEMS <span id="stat-items">none</span></span>
+  </div>
+
+  <section class="game-panel">
+    <div class="scene-art" id="scene-art" aria-hidden="true">&#9876;</div>
+    <p class="scene-text" id="scene-text"></p>
+    <div class="choices" id="choices"></div>
+    <button class="restart-btn hidden" id="restart-btn">PLAY AGAIN</button>
+  </section>
+
+  <p class="footer-note">Use the buttons to choose your path.</p>
+</main>
+
+<script src="game.js"></script>
+</body>
+</html>
