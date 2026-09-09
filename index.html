@@ -15,22 +15,51 @@
 <main class="arcade-cabinet">
   <h1 class="title">KNIGHT&rsquo;S JOURNEY</h1>
 
-  <div class="stats-bar" id="stats-bar">
-    <span class="stat">HP <span id="stat-hp">10</span></span>
+  <div class="stats-bar">
+    <span class="stat">HP <span id="stat-hp">12/12</span></span>
+    <span class="stat">STR <span id="stat-str">3</span></span>
+    <span class="stat">DEX <span id="stat-dex">2</span></span>
+    <span class="stat">CHA <span id="stat-cha">1</span></span>
     <span class="stat">GOLD <span id="stat-gold">0</span></span>
     <span class="stat">ITEMS <span id="stat-items">none</span></span>
   </div>
 
-  <section class="game-panel">
-    <div class="scene-art" id="scene-art" aria-hidden="true">&#9876;</div>
-    <p class="scene-text" id="scene-text"></p>
-    <div class="choices" id="choices"></div>
-    <button class="restart-btn hidden" id="restart-btn">PLAY AGAIN</button>
+  <section class="map-wrap">
+    <canvas id="map-canvas"></canvas>
+
+    <div id="overlay" class="game-overlay hidden">
+      <div class="overlay-panel">
+        <canvas id="portrait-canvas" width="80" height="80" class="portrait"></canvas>
+        <p id="overlay-text" class="overlay-text"></p>
+        <div id="overlay-die" class="die hidden">🎲 <span id="die-value">20</span></div>
+        <div id="overlay-choices" class="choices"></div>
+      </div>
+    </div>
+
+    <div id="combat-overlay" class="game-overlay hidden">
+      <div class="overlay-panel">
+        <canvas id="enemy-portrait" width="80" height="80" class="portrait"></canvas>
+        <p id="enemy-name" class="enemy-name"></p>
+        <div class="hpbar"><div id="enemy-hp-fill" class="hpbar-fill"></div></div>
+        <p id="enemy-hp-text" class="hp-text"></p>
+        <p id="combat-log" class="overlay-text"></p>
+        <div id="combat-die" class="die hidden">🎲 <span id="combat-die-value">20</span></div>
+        <div id="combat-actions" class="choices"></div>
+      </div>
+    </div>
+
+    <div id="ending-overlay" class="game-overlay hidden">
+      <div class="overlay-panel">
+        <h2 id="ending-title" class="ending-title"></h2>
+        <p id="ending-text" class="overlay-text"></p>
+        <button id="restart-btn" class="restart-btn">PLAY AGAIN</button>
+      </div>
+    </div>
   </section>
 
-  <p class="footer-note">Use the buttons to choose your path.</p>
+  <p class="footer-note">Move with Arrow Keys / WASD. Walk into a marker to interact: ! traveler, &#8801; rubble, + campfire, &#9760; the Blackwood Gate.</p>
 </main>
 
-<script src="game.js"></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
