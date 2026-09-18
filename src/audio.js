@@ -3,7 +3,7 @@
 export class Engine {
   constructor() {
     this.ctx = null;
-    this.muted = localStorage.getItem('apex-drift.muted') === '1';
+    this.muted = readMuted();
   }
 
   start() {
@@ -80,8 +80,26 @@ export class Engine {
 
   toggleMute() {
     this.muted = !this.muted;
-    localStorage.setItem('apex-drift.muted', this.muted ? '1' : '0');
+    writeMuted(this.muted);
     if (this.master) this.master.gain.value = this.muted ? 0 : 0.5;
     return this.muted;
+  }
+}
+
+// Storage can be empty or throw outright (private window, blocked site data),
+// and the game has to run either way.
+function readMuted() {
+  try {
+    return localStorage.getItem('apex-drift.muted') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeMuted(muted) {
+  try {
+    localStorage.setItem('apex-drift.muted', muted ? '1' : '0');
+  } catch {
+    /* preference just will not persist */
   }
 }
