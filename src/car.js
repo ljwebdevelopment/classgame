@@ -166,16 +166,20 @@ export class Car {
       if (this.pos.y <= groundY) {
         this.pos.y = groundY;
         this.landed = this.airTime;
-        this.airTime = 0;
         this.airborne = false;
         this.vy = 0;
-        this.vel.multiplyScalar(1 - CAR.LAND_SCRUB);
+        // only a real landing costs speed; clipping a crest should not
+        if (this.airTime > CAR.REAL_JUMP) this.vel.multiplyScalar(1 - CAR.LAND_SCRUB);
+        this.airTime = 0;
       }
       return;
     }
 
     const needed = dt > 0 ? (groundY - this.pos.y) / dt : 0;
-    if (needed < this.vy - CAR.GRAVITY * dt) {
+    // LAUNCH_STICK keeps the wheels down over rolling crests, where sampling
+    // jitter in the height lookup would otherwise chatter the car into the
+    // air hundreds of times a lap. A real ramp lip clears it easily.
+    if (needed < this.vy - CAR.GRAVITY * dt - CAR.LAUNCH_STICK) {
       // the ground fell away faster than gravity can follow: take off
       this.airborne = true;
       this.airTime = 0;
