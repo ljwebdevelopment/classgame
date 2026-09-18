@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>Apex Drift — 3D Time Trial</title>
+<meta name="description" content="A low-poly 3D kart time trial: drift a circuit, beat the ghost of your own best lap.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#127950;</text></svg>">
+<link rel="stylesheet" href="./style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+
+<div id="ui">
+
+  <div id="loading" class="screen">
+    <div class="spinner"></div>
+    <p>building the circuit…</p>
+  </div>
+
+  <div id="title-screen" class="screen">
+    <div class="title-card">
+      <p class="eyebrow">Low-poly time trial</p>
+      <h1>APEX<span>DRIFT</span></h1>
+      <p class="blurb">
+        One circuit. One clock. Every lap you set becomes a translucent ghost
+        you race on the next one.
+      </p>
+      <button id="start-btn" class="start">DRIVE</button>
+      <ul class="keys">
+        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span>steer &amp; throttle</span></li>
+        <li><kbd>Space</kbd> <span>handbrake drift</span></li>
+        <li><kbd>R</kbd> <span>rescue to track</span></li>
+        <li><kbd>Enter</kbd> <span>restart lap</span></li>
+        <li><kbd>M</kbd> <span>sound</span> &nbsp; <kbd>C</kbd> <span>clear ghost</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div class="panel times">
+      <div class="row">
+        <span class="label">LAP</span>
+        <span id="lap-time" class="value big">0:00.00</span>
+        <span id="delta" class="delta"></span>
+      </div>
+      <div class="row sub">
+        <span class="label">BEST</span>
+        <span id="best-time" class="value">--:--.--</span>
+        <span class="label">LAPS</span>
+        <span id="lap-count" class="value">0</span>
+      </div>
+      <div id="ghost-state" class="ghost-state"></div>
+    </div>
+
+    <div class="panel speedo">
+      <span id="speed" class="kph">0</span>
+      <span class="unit">km/h</span>
+      <span id="gear" class="gear"></span>
+    </div>
+
+    <div id="countdown" class="countdown"></div>
+    <div id="toast" class="toast"></div>
+
+    <div id="touch" class="touch">
+      <div class="pad left">
+        <button id="btn-left" class="tbtn">◀</button>
+        <button id="btn-right" class="tbtn">▶</button>
+      </div>
+      <div class="pad right">
+        <button id="btn-drift" class="tbtn wide">DRIFT</button>
+        <div class="row">
+          <button id="btn-brake" class="tbtn small">BRAKE</button>
+          <button id="btn-gas" class="tbtn gas">GAS</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
