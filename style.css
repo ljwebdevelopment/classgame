@@ -236,7 +236,7 @@ kbd {
   .pad.right .row { display: flex; gap: 10px; align-items: flex-end; }
   .tbtn {
     pointer-events: auto;
-    width: 68px; height: 68px;
+    width: 62px; height: 62px;
     border-radius: 18px;
     border: 1px solid var(--edge);
     background: rgba(13, 17, 23, 0.6);
@@ -247,7 +247,7 @@ kbd {
     -webkit-user-select: none;
   }
   .tbtn:active { background: rgba(255, 255, 255, 0.18); }
-  .tbtn.small { width: 62px; height: 52px; font-size: 11px; letter-spacing: 0.08em; }
+  .tbtn.small { width: 56px; height: 52px; font-size: 10px; letter-spacing: 0.06em; }
   .tbtn.wide { width: 140px; height: 44px; font-size: 11px; letter-spacing: 0.12em; }
   .tbtn.gas { width: 84px; height: 84px; background: rgba(255, 90, 60, 0.5); font-size: 13px; letter-spacing: 0.12em; }
   .speedo { bottom: auto; top: max(16px, env(safe-area-inset-top)); }

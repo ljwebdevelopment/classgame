@@ -2,7 +2,9 @@
 export class Input {
   constructor() {
     this.keys = new Set();
-    this.touch = { left: false, right: false, gas: false, brake: false, drift: false };
+    this.touch = {
+      left: false, right: false, gas: false, brake: false, drift: false, stop: false,
+    };
     this.onAction = null;
 
     addEventListener('keydown', (e) => {
@@ -19,7 +21,8 @@ export class Input {
   bindTouch(root) {
     const map = {
       'btn-left': 'left', 'btn-right': 'right',
-      'btn-gas': 'gas', 'btn-brake': 'brake', 'btn-drift': 'drift',
+      'btn-gas': 'gas', 'btn-brake': 'brake',
+      'btn-drift': 'drift', 'btn-stop': 'stop',
     };
     for (const [id, name] of Object.entries(map)) {
       const el = root.querySelector('#' + id);
@@ -48,7 +51,9 @@ export class Input {
     return t;
   }
 
-  get drift() { return this.has(' ', 'shift') || this.touch.drift; }
+  get drift() { return this.has('shift') || this.touch.drift; }
+
+  get stop() { return this.has(' ') || this.touch.stop; }
 }
 
 const HANDLED = new Set([

@@ -1,6 +1,6 @@
 import { GHOST_HZ, STORAGE_KEY } from './config.js';
 
-const STRIDE = 5;   // t, x, z, heading, lap progress
+const STRIDE = 6;   // t, x, y, z, heading, lap progress
 
 // Records the current lap at a fixed rate and replays the best one. Samples are
 // a flat number array so they round-trip through localStorage cheaply.
@@ -17,14 +17,14 @@ export class GhostRecorder {
     if (this.acc < 1 / GHOST_HZ) return;
     this.acc = 0;
     this.data.push(
-      round(t, 3), round(car.pos.x, 2), round(car.pos.z, 2),
+      round(t, 3), round(car.pos.x, 2), round(car.pos.y, 2), round(car.pos.z, 2),
       round(car.heading, 4), round(car.lapU ?? 0, 5),
     );
   }
 
   finish(t, car) {
     this.data.push(
-      round(t, 3), round(car.pos.x, 2), round(car.pos.z, 2),
+      round(t, 3), round(car.pos.x, 2), round(car.pos.y, 2), round(car.pos.z, 2),
       round(car.heading, 4), 1,
     );
     return this.data;
@@ -56,8 +56,9 @@ export class GhostPlayer {
 
     return {
       x: lerp(this.data[a + 1], this.data[b + 1], k),
-      z: lerp(this.data[a + 2], this.data[b + 2], k),
-      heading: lerpAngle(this.data[a + 3], this.data[b + 3], k),
+      y: lerp(this.data[a + 2], this.data[b + 2], k),
+      z: lerp(this.data[a + 3], this.data[b + 3], k),
+      heading: lerpAngle(this.data[a + 4], this.data[b + 4], k),
       done: t > this.duration,
     };
   }
@@ -67,13 +68,13 @@ export class GhostPlayer {
     const n = this.frames;
     if (!n) return null;
     let lo = 0, hi = n - 1;
-    if (u <= this.data[4]) return this.data[0];
-    if (u >= this.data[(n - 1) * STRIDE + 4]) return this.data[(n - 1) * STRIDE];
+    if (u <= this.data[5]) return this.data[0];
+    if (u >= this.data[(n - 1) * STRIDE + 5]) return this.data[(n - 1) * STRIDE];
     while (lo < hi - 1) {
       const mid = (lo + hi) >> 1;
-      if (this.data[mid * STRIDE + 4] <= u) lo = mid; else hi = mid;
+      if (this.data[mid * STRIDE + 5] <= u) lo = mid; else hi = mid;
     }
-    const u0 = this.data[lo * STRIDE + 4], u1 = this.data[hi * STRIDE + 4];
+    const u0 = this.data[lo * STRIDE + 5], u1 = this.data[hi * STRIDE + 5];
     const k = u1 > u0 ? (u - u0) / (u1 - u0) : 0;
     return lerp(this.data[lo * STRIDE], this.data[hi * STRIDE], k);
   }

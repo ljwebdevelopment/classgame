@@ -195,29 +195,35 @@ function step(dt) {
     state.delta = null;
   }
 
+  // call out a decent jump once the car is back on the ground
+  if (car.landed > 0) {
+    if (car.landed > 0.75) hud.toast(`big air  ${car.landed.toFixed(1)}s`, 'best', 2);
+    car.landed = 0;
+  }
+
   // lay rubber when the tyres are sliding
-  if (Math.abs(car.lateral) > 4.5 && car.speed > 6 && !car.offRoad) {
+  if (Math.abs(car.lateral) > 4.5 && car.speed > 6 && !car.offRoad && !car.airborne) {
     car.rearWheels(_a, _b);
     skids.drop(_a, car.heading);
     skids.drop(_b, car.heading);
   }
 }
 
-const IDLE = { steer: 0, throttle: 0, drift: false };
+const IDLE = { steer: 0, throttle: 0, drift: false, stop: false };
 
 function updateGhostCar() {
   if (!state.started || !ghost.frames) { ghostCar.mesh.visible = false; return; }
   const g = ghost.at(state.lapTime);
   if (!g) { ghostCar.mesh.visible = false; return; }
   ghostCar.mesh.visible = true;
-  ghostCar.mesh.position.set(g.x, 0, g.z);
+  ghostCar.mesh.position.set(g.x, g.y, g.z);
   ghostCar.mesh.rotation.y = g.heading;
 }
 
 function camSnap() {
   const f = car.forward(_a);
-  camPos.set(car.pos.x, 0, car.pos.z).addScaledVector(f, -11).setY(4.8);
-  camLook.set(car.pos.x, 1.2, car.pos.z).addScaledVector(f, 7);
+  camPos.copy(car.pos).addScaledVector(f, -11).setY(car.pos.y + 4.8);
+  camLook.set(car.pos.x, car.pos.y + 1.2, car.pos.z).addScaledVector(f, 7);
   camera.position.copy(camPos);
   camera.lookAt(camLook);
 }
@@ -225,12 +231,12 @@ function camSnap() {
 function updateCamera(dt) {
   const f = car.forward(_a);
   const speedK = Math.min(1, car.speed / 57);
-  _b.set(car.pos.x, 0, car.pos.z).addScaledVector(f, -11 - speedK * 2.2).setY(4.8);
+  _b.copy(car.pos).addScaledVector(f, -11 - speedK * 2.2).setY(car.pos.y + 4.8);
   const k = 1 - Math.exp(-7 * dt);
   camPos.lerp(_b, k);
   camera.position.copy(camPos);
 
-  _b.set(car.pos.x, 1.2, car.pos.z).addScaledVector(f, 7);
+  _b.set(car.pos.x, car.pos.y + 1.2, car.pos.z).addScaledVector(f, 7);
   camLook.lerp(_b, 1 - Math.exp(-11 * dt));
   camera.lookAt(camLook);
 
@@ -240,8 +246,8 @@ function updateCamera(dt) {
     camera.updateProjectionMatrix();
   }
 
-  sun.position.set(car.pos.x + 78, 74, car.pos.z + 50);
-  sun.target.position.set(car.pos.x, 0, car.pos.z);
+  sun.position.set(car.pos.x + 78, car.pos.y + 74, car.pos.z + 50);
+  sun.target.position.copy(car.pos);
   sun.target.updateMatrixWorld();
 }
 

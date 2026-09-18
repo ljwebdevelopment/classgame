@@ -1,13 +1,15 @@
 import * as THREE from 'three';
-import { TRACK } from './config.js';
+import { TRACK, elevationAt } from './config.js';
+import { grassTexture } from './scenery.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 
-// A closed circuit built from a Catmull-Rom spline. The same evenly spaced
-// sample array drives both the road geometry and the physics queries, so what
-// you see is exactly what the car collides with.
+// A closed circuit built from a Catmull-Rom spline on the XZ plane, with a
+// separate height profile laid over it. The same evenly spaced sample array
+// drives the road geometry and the physics queries, so what you see is exactly
+// what the car drives on.
 export class Track {
   constructor() {
     const pts = TRACK.POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z));
@@ -19,26 +21,33 @@ export class Track {
     this.points = [];
     this.tangents = [];
     this.sides = [];
-    this.dist = [];   // arc length at each sample
+    this.heights = [];
 
     for (let i = 0; i < n; i++) {
       const u = i / n;
       const p = this.curve.getPointAt(u);
       const t = this.curve.getTangentAt(u).setY(0).normalize();
-      // right-hand side vector: tangent x up
+      // cross(tangent, up) is the right-hand side when viewed from behind
       const s = new THREE.Vector3().crossVectors(t, UP).normalize();
       this.points.push(p);
       this.tangents.push(t);
       this.sides.push(s);
-      this.dist.push(u * this.length);
+      this.heights.push(elevationAt(u));
     }
     this.segLen = this.length / n;
-    this.wallLimit = TRACK.HALF_WIDTH + TRACK.WALL_MARGIN;
-  }
 
-  at(i) { return this.points[((i % this.n) + this.n) % this.n]; }
-  tangentAt(i) { return this.tangents[((i % this.n) + this.n) % this.n]; }
-  sideAt(i) { return this.sides[((i % this.n) + this.n) % this.n]; }
+    // rise per unit of distance along the track, for the gravity pull on hills
+    this.slopes = this.heights.map((_, i) => {
+      const a = this.heights[(i - 1 + n) % n];
+      const b = this.heights[(i + 1) % n];
+      return (b - a) / (2 * this.segLen);
+    });
+
+    this.wallLimit = TRACK.HALF_WIDTH + TRACK.WALL_MARGIN;
+    this.kerbEdge = TRACK.HALF_WIDTH + TRACK.CURB_WIDTH;
+    this.shoulder = this.wallLimit + 2;                    // flat ground ends
+    this.foot = this.shoulder + TRACK.EMBANKMENT;          // embankment meets 0
+  }
 
   // Nearest point on the centreline. `hint` is the previous index, which turns
   // this into a tiny local search instead of a full scan.
@@ -69,11 +78,29 @@ export class Track {
     return {
       index: bestI,
       u,
-      offset: dx * s.x + dz * s.z,   // signed distance from centreline
+      offset: dx * s.x + dz * s.z,   // signed distance from the centreline
+      height: elevationAt(u),
+      slope: this.slopes[bestI],
       tangent: t,
       side: s,
       point: p,
     };
+  }
+
+  // Ground height anywhere in the world: flat across the roadbed, then an
+  // embankment carrying it down to the surrounding ground.
+  heightForOffset(u, offset) {
+    const h = elevationAt(u);
+    const d = Math.abs(offset);
+    if (d <= this.shoulder) return h;
+    if (d >= this.foot) return 0;
+    const t = (d - this.shoulder) / (this.foot - this.shoulder);
+    return h * (1 - t * t * (3 - 2 * t));
+  }
+
+  surfaceHeight(x, z, hint) {
+    const loc = this.locate(x, z, hint);
+    return this.heightForOffset(loc.u, loc.offset);
   }
 
   // World-space frame at a normalised distance around the lap.
@@ -84,20 +111,15 @@ export class Track {
     const j = (i + 1) % this.n;
     const k = f - Math.floor(f);
     const point = _a.copy(this.points[i]).lerp(this.points[j], k).clone();
+    point.y = elevationAt(u);
     const tangent = _b.copy(this.tangents[i]).lerp(this.tangents[j], k).normalize().clone();
     const side = new THREE.Vector3().crossVectors(tangent, UP).normalize();
-    return { point, tangent, side, heading: Math.atan2(tangent.x, tangent.z) };
-  }
-
-  // Signed shortest difference between two lap progress values, in [-0.5, 0.5).
-  static deltaU(a, b) {
-    let d = a - b;
-    d -= Math.round(d);
-    return d;
+    return { point, tangent, side, height: point.y, heading: Math.atan2(tangent.x, tangent.z) };
   }
 
   build() {
     const group = new THREE.Group();
+    group.add(this.#verges());
     group.add(this.#road());
     group.add(this.#kerbs(1));
     group.add(this.#kerbs(-1));
@@ -107,7 +129,9 @@ export class Track {
     return group;
   }
 
-  #ribbon(inner, outer, y, colorFn) {
+  // Ribbon between two lateral offsets. `heightFn(i, edge)` gives the y of the
+  // inner (0) and outer (1) edge at sample i, so a strip can slope sideways.
+  #ribbon(inner, outer, heightFn, colorFn, uScale = 1) {
     const n = this.n;
     const pos = new Float32Array((n + 1) * 2 * 3);
     const col = colorFn ? new Float32Array((n + 1) * 2 * 3) : null;
@@ -119,11 +143,17 @@ export class Track {
       const i = k % n;
       const p = this.points[i], s = this.sides[i];
       const o = k * 6;
-      pos[o + 0] = p.x + s.x * inner; pos[o + 1] = y; pos[o + 2] = p.z + s.z * inner;
-      pos[o + 3] = p.x + s.x * outer; pos[o + 4] = y; pos[o + 5] = p.z + s.z * outer;
+      pos[o + 0] = p.x + s.x * inner;
+      pos[o + 1] = heightFn(i, 0);
+      pos[o + 2] = p.z + s.z * inner;
+      pos[o + 3] = p.x + s.x * outer;
+      pos[o + 4] = heightFn(i, 1);
+      pos[o + 5] = p.z + s.z * outer;
+
       const v = (k * this.segLen) / 10;
       uv[k * 4 + 0] = 0; uv[k * 4 + 1] = v;
-      uv[k * 4 + 2] = 1; uv[k * 4 + 3] = v;
+      uv[k * 4 + 2] = uScale; uv[k * 4 + 3] = v;
+
       if (col) {
         colorFn(i, c);
         col[o + 0] = c.r; col[o + 1] = c.g; col[o + 2] = c.b;
@@ -131,7 +161,7 @@ export class Track {
       }
       if (k < n) {
         const a = k * 2, b = a + 1, a2 = a + 2, b2 = a + 3;
-        // inner is the "left" edge when inner < outer, so wind for +Y normals
+        // wind for upward normals, whichever side of the track this is
         if (inner < outer) idx.push(a, b, b2, a, b2, a2);
         else idx.push(a, b2, b, a, a2, b2);
       }
@@ -148,11 +178,8 @@ export class Track {
 
   #road() {
     const hw = TRACK.HALF_WIDTH;
-    const g = this.#ribbon(-hw, hw, 0.02);
-    const tex = asphaltTexture();
-    tex.repeat.set(1, 1);
-    const m = new THREE.MeshLambertMaterial({ map: tex });
-    const mesh = new THREE.Mesh(g, m);
+    const g = this.#ribbon(-hw, hw, (i) => this.heights[i] + 0.02);
+    const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: asphaltTexture() }));
     mesh.receiveShadow = true;
     mesh.name = 'road';
     return mesh;
@@ -160,15 +187,37 @@ export class Track {
 
   #kerbs(dir) {
     const hw = TRACK.HALF_WIDTH;
-    const inner = dir * hw;
-    const outer = dir * (hw + TRACK.CURB_WIDTH);
     const red = new THREE.Color('#d0402f');
     const white = new THREE.Color('#eceff2');
-    const g = this.#ribbon(Math.min(inner, outer), Math.max(inner, outer), 0.05,
+    const g = this.#ribbon(dir * hw, dir * this.kerbEdge, (i) => this.heights[i] + 0.05,
       (i, c) => c.copy(Math.floor(i / 4) % 2 === 0 ? red : white));
     const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
     mesh.receiveShadow = true;
     return mesh;
+  }
+
+  // Flat grass beside the road, then the embankment down to ground level.
+  #verges() {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({ map: grassTexture() });
+    for (const dir of [1, -1]) {
+      const flat = new THREE.Mesh(
+        this.#ribbon(dir * this.kerbEdge, dir * this.shoulder,
+          (i) => this.heights[i], null, (this.shoulder - this.kerbEdge) / 10),
+        mat,
+      );
+      flat.receiveShadow = true;
+      group.add(flat);
+
+      const slope = new THREE.Mesh(
+        this.#ribbon(dir * this.shoulder, dir * this.foot,
+          (i, edge) => (edge === 0 ? this.heights[i] : 0), null, TRACK.EMBANKMENT / 10),
+        mat,
+      );
+      slope.receiveShadow = true;
+      group.add(slope);
+    }
+    return group;
   }
 
   #barriers() {
@@ -188,11 +237,14 @@ export class Track {
     let n = 0;
     for (let i = 0; i < this.n; i += step) {
       const p = this.points[i], s = this.sides[i], t = this.tangents[i];
-      const yaw = Math.atan2(t.x, t.z);
-      q.setFromAxisAngle(UP, yaw);
+      q.setFromAxisAngle(UP, Math.atan2(t.x, t.z));
       for (const dir of [1, -1]) {
         m.compose(
-          new THREE.Vector3(p.x + s.x * off * dir, 0.58, p.z + s.z * off * dir),
+          new THREE.Vector3(
+            p.x + s.x * off * dir,
+            this.heights[i] + 0.58,
+            p.z + s.z * off * dir,
+          ),
           q, scale,
         );
         mesh.setMatrixAt(n, m);
@@ -207,11 +259,12 @@ export class Track {
 
   #startLine() {
     const hw = TRACK.HALF_WIDTH;
-    const geo = new THREE.PlaneGeometry(hw * 2, 3);
-    const mat = new THREE.MeshLambertMaterial({ map: checkerTexture() });
-    const mesh = new THREE.Mesh(geo, mat);
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(hw * 2, 3),
+      new THREE.MeshLambertMaterial({ map: checkerTexture() }),
+    );
     const f = this.frameAt(0);
-    mesh.position.set(f.point.x, 0.06, f.point.z);
+    mesh.position.set(f.point.x, f.height + 0.06, f.point.z);
     mesh.rotation.set(-Math.PI / 2, 0, 0);
     mesh.rotateZ(-f.heading);
     return mesh;
@@ -228,12 +281,16 @@ export class Track {
 
     for (const dir of [1, -1]) {
       const post = new THREE.Mesh(postGeo, postMat);
-      post.position.set(f.point.x + f.side.x * span * dir, 3.5, f.point.z + f.side.z * span * dir);
+      post.position.set(
+        f.point.x + f.side.x * span * dir,
+        f.height + 3.5,
+        f.point.z + f.side.z * span * dir,
+      );
       post.castShadow = true;
       g.add(post);
     }
     const beam = new THREE.Mesh(beamGeo, beamMat);
-    beam.position.set(f.point.x, 7.2, f.point.z);
+    beam.position.set(f.point.x, f.height + 7.2, f.point.z);
     beam.rotation.y = f.heading;
     beam.castShadow = true;
     g.add(beam);
@@ -261,8 +318,7 @@ function asphaltTexture() {
   x.fillRect(62, 300, 4, 180);
 
   const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.anisotropy = 8;
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;

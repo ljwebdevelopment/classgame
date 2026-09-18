@@ -46,7 +46,7 @@ function sky() {
   return m;
 }
 
-function ground() {
+export function grassTexture(repeat = 1) {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
   const x = c.getContext('2d');
@@ -59,12 +59,15 @@ function ground() {
   }
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(90, 90);
+  tex.repeat.set(repeat, repeat);
   tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
+function ground() {
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(2400, 2400),
-    new THREE.MeshLambertMaterial({ map: tex }),
+    new THREE.MeshLambertMaterial({ map: grassTexture(90) }),
   );
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = -0.02;
@@ -75,7 +78,7 @@ function ground() {
 function foliage(track) {
   const group = new THREE.Group();
   const rand = rng(20260918);
-  const clearance = TRACK.HALF_WIDTH + TRACK.BARRIER_OFFSET + 6;
+  const clearance = track.shoulder + 3;
 
   const trunkGeo = new THREE.CylinderGeometry(0.35, 0.5, 3, 6);
   const leafGeo = new THREE.ConeGeometry(2.6, 7, 7);
@@ -102,22 +105,22 @@ function foliage(track) {
     const x = (rand() - 0.5) * 760;
     const z = (rand() - 0.5) * 820;
     const loc = track.locate(x, z, null);
-    const clear = Math.abs(loc.offset);
-    if (clear < clearance) continue;
+    if (Math.abs(loc.offset) < clearance) continue;
+    const y = track.heightForOffset(loc.u, loc.offset);
 
     if (trees < 300 && rand() < 0.78) {
       const s = 0.7 + rand() * 0.8;
       q.setFromAxisAngle(up, rand() * Math.PI * 2);
       scl.set(s, s, s);
-      m.compose(pos.set(x, 1.5 * s, z), q, scl);
+      m.compose(pos.set(x, y + 1.5 * s, z), q, scl);
       trunks.setMatrixAt(trees, m);
-      m.compose(pos.set(x, (3 + 3.5) * s, z), q, scl);
+      m.compose(pos.set(x, y + 6.5 * s, z), q, scl);
       leaves.setMatrixAt(trees, m);
       trees++;
     } else if (stones < 90) {
       const s = 0.6 + rand() * 1.4;
       q.setFromAxisAngle(up, rand() * Math.PI * 2);
-      m.compose(pos.set(x, 0.5 * s, z), q, scl.set(s, s * 0.7, s));
+      m.compose(pos.set(x, y + 0.5 * s, z), q, scl.set(s, s * 0.7, s));
       rocks.setMatrixAt(stones, m);
       stones++;
     }
@@ -171,7 +174,7 @@ export class SkidMarks {
 
   drop(point, heading) {
     this.q.setFromAxisAngle(this.up, heading);
-    point.y = 0.07;
+    point.y += 0.07;
     this.m.compose(point, this.q, this.scale);
     this.mesh.setMatrixAt(this.i, this.m);
     this.i = (this.i + 1) % this.max;

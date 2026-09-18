@@ -8,6 +8,7 @@ export const TRACK = {
   WALL_MARGIN: 5.0,    // grass runout past the asphalt before the wall
   BARRIER_OFFSET: 6.4, // where the visual barriers sit
   CHECKPOINTS: 8,      // sectors that must be taken in order for a valid lap
+  EMBANKMENT: 30,      // grass slope carrying the raised roadbed down to ground
 
   // Control points of the circuit, on the XZ plane. Closed centripetal
   // Catmull-Rom loop: long start straight, fast right sweeper, a chicane,
@@ -23,13 +24,17 @@ export const TRACK = {
 };
 
 export const CAR = {
-  ENGINE: 30,          // forward acceleration, units/s^2
+  // Acceleration and drag are tuned as a pair: both were halved from the
+  // original so the car still tops out around 57 u/s, it just takes
+  // noticeably longer to get there.
+  ENGINE: 17,          // forward acceleration, units/s^2
   BRAKE: 46,
+  HANDBRAKE: 74,       // space: hauls the car down to a standstill
   REVERSE: 13,
   MAX_REVERSE: 14,
 
-  DRAG_QUAD: 0.006,    // with ENGINE above this settles around 57 u/s
-  DRAG_LIN: 0.18,
+  DRAG_QUAD: 0.0035,
+  DRAG_LIN: 0.10,
 
   GRIP: 7.0,           // lateral velocity damping, 1/s
   GRIP_DRIFT: 1.3,     // handbrake held: the back end lets go
@@ -43,11 +48,19 @@ export const CAR = {
   STEER_RATE: 4.0,     // how fast the wheels turn towards the input
   STEER_RETURN: 6.0,   // how fast they centre again
 
-  OFF_DRAG: 2.4,       // grass: heavy drag, no grip, less power
-  OFF_GRIP: 3.5,
-  OFF_ENGINE_SCALE: 0.45,
+  // grass costs you roughly half your top speed - a real penalty you can
+  // still drive out of, not a trap that stops the car dead
+  OFF_DRAG: 0.25,
+  OFF_GRIP: 4.5,
+  OFF_ENGINE_SCALE: 0.7,
 
-  WALL_SCRUB: 1.4,     // speed bled per second while scraping a barrier
+  GRAVITY: 24,         // pulls the car back down after a jump
+  SLOPE_PULL: 22,      // gravity along the chassis: climbs cost speed
+  AIR_YAW: 0.35,       // how much steering authority survives mid-flight
+  AIR_GRIP: 0.2,       // almost none - you keep the trajectory you launched on
+  LAND_SCRUB: 0.04,    // speed lost on touchdown
+
+  WALL_SCRUB: 0.5,     // speed bled per second while scraping a barrier
   WALL_BOUNCE: 1.1,
 
   WIDTH: 2.0,
@@ -56,4 +69,37 @@ export const CAR = {
 };
 
 export const GHOST_HZ = 30;   // ghost recording rate
-export const STORAGE_KEY = 'apex-drift.best.v1';
+// v2: ghost samples carry height now, so old flat-track ghosts are discarded
+export const STORAGE_KEY = 'apex-drift.best.v2';
+
+// Height profile around the lap as [progress, height, easing]. 'l' is a
+// straight slope (ramp faces), 's' a smoothstep (rolling hills). The last
+// keyframe must return to the height of the first - it is a closed loop.
+export const ELEVATION = [
+  [0.000,  0.0, 's'],
+  [0.055,  0.0, 'l'],   // ramp one, take-off face
+  [0.078,  5.6, 'l'],   // lip
+  [0.090,  0.0, 's'],   // back side drops away
+  [0.200, 12.0, 's'],   // long climb
+  [0.300, 16.0, 's'],   // high point of the circuit
+  [0.420,  4.0, 's'],   // descent
+  [0.500,  8.5, 's'],   // roller
+  [0.560,  2.0, 'l'],   // ramp two, take-off face
+  [0.580,  7.8, 'l'],   // lip
+  [0.592,  1.5, 's'],   // back side drops away
+  [0.700, 10.0, 's'],
+  [0.800, 14.0, 's'],
+  [0.920,  3.0, 's'],
+  [1.000,  0.0, 's'],
+];
+
+// Height at a normalised distance around the lap.
+export function elevationAt(u) {
+  u -= Math.floor(u);
+  let i = 0;
+  while (i < ELEVATION.length - 2 && ELEVATION[i + 1][0] <= u) i++;
+  const [u0, h0, ease] = ELEVATION[i];
+  const [u1, h1] = ELEVATION[i + 1];
+  const t = u1 > u0 ? (u - u0) / (u1 - u0) : 0;
+  return h0 + (h1 - h0) * (ease === 'l' ? t : t * t * (3 - 2 * t));
+}

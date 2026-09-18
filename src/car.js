@@ -13,6 +13,12 @@ export class Car {
     this.pos = new THREE.Vector3();
     this.vel = new THREE.Vector3();
     this.heading = 0;
+    this.vy = 0;
+    this.airborne = false;
+    this.airTime = 0;
+    this.landed = 0;       // airtime of the jump just completed, for the HUD
+    this.groundY = 0;
+    this.pitch = 0;
     this.steer = 0;
     this.hint = null;
     this.drifting = false;
@@ -34,16 +40,23 @@ export class Car {
     return out.set(Math.sin(this.heading), 0, Math.cos(this.heading));
   }
 
+  // cross(forward, up): the driver's right. The mesh is modelled nose-first
+  // along +Z, so its local +X is the car's LEFT - hence the negated cosine,
+  // and hence steering right means the heading angle decreases.
   right(out = new THREE.Vector3()) {
-    return out.set(Math.cos(this.heading), 0, -Math.sin(this.heading));
+    return out.set(-Math.cos(this.heading), 0, Math.sin(this.heading));
   }
 
   placeAt(track, u) {
     const f = track.frameAt(u);
-    this.pos.set(f.point.x, 0, f.point.z);
+    this.pos.set(f.point.x, f.height, f.point.z);
     this.heading = f.heading;
     this.vel.set(0, 0, 0);
     this.steer = 0;
+    this.vy = 0;
+    this.airborne = false;
+    this.airTime = 0;
+    this.groundY = f.height;
     this.hint = null;
     this.sync();
   }
@@ -67,20 +80,40 @@ export class Car {
     this.hint = loc.index;
     this.lapU = loc.u;
     this.offset = loc.offset;
-    this.offRoad = Math.abs(loc.offset) > TRACK.HALF_WIDTH + TRACK.CURB_WIDTH;
+    // grass only bites when a wheel is actually on it
+    this.offRoad = !this.airborne
+      && Math.abs(loc.offset) > TRACK.HALF_WIDTH + TRACK.CURB_WIDTH;
 
-    // engine / brakes
-    const power = this.offRoad ? CAR.OFF_ENGINE_SCALE : 1;
-    if (input.throttle > 0) {
-      vf += CAR.ENGINE * power * input.throttle * dt;
-    } else if (input.throttle < 0) {
-      if (vf > 0.5) vf -= CAR.BRAKE * dt;
-      else vf = Math.max(vf - CAR.REVERSE * power * dt, -CAR.MAX_REVERSE);
+    if (this.airborne) {
+      // no traction in mid-air: you keep the line you took off on
+      this.airTime += dt;
+    } else {
+      // engine / brakes
+      const power = this.offRoad ? CAR.OFF_ENGINE_SCALE : 1;
+      if (input.throttle > 0) {
+        vf += CAR.ENGINE * power * input.throttle * dt;
+      } else if (input.throttle < 0) {
+        if (vf > 0.5) vf -= CAR.BRAKE * dt;
+        else vf = Math.max(vf - CAR.REVERSE * power * dt, -CAR.MAX_REVERSE);
+      }
+
+      // space: a dedicated stop, which never rolls back into reverse
+      if (input.stop) {
+        if (vf > 0) vf = Math.max(0, vf - CAR.HANDBRAKE * dt);
+        else vf = Math.min(0, vf + CAR.HANDBRAKE * dt);
+        vl *= Math.exp(-CAR.GRIP * 2 * dt);
+      }
+
+      // gravity along the chassis: climbs cost speed, descents give it back
+      const climb = loc.slope * fwd.dot(loc.tangent);
+      this.pitch = Math.atan(climb);
+      vf -= CAR.SLOPE_PULL * Math.sin(this.pitch) * dt;
     }
 
     // drag: quadratic keeps the top speed sane, linear settles it at a stop
     let drag = CAR.DRAG_QUAD * Math.abs(vf) * vf + CAR.DRAG_LIN * vf;
     if (this.offRoad) drag += CAR.OFF_DRAG * vf;
+    if (this.airborne) drag *= 0.25;
     vf -= drag * dt;
 
     // steering authority ramps in with speed, then tapers off at the top end
@@ -89,16 +122,19 @@ export class Car {
     const dir = vf >= 0 ? 1 : -1;
     let yaw = this.steer * CAR.MAX_YAW * sf * dir;
 
-    this.drifting = input.drift && speed > CAR.DRIFT_MIN_SPEED;
+    this.drifting = input.drift && speed > CAR.DRIFT_MIN_SPEED && !this.airborne;
     if (this.drifting) {
       yaw += this.steer * CAR.DRIFT_YAW * Math.min(1, speed / 25);
       vf -= CAR.DRIFT_SCRUB * vf * dt;
     }
-    this.heading += yaw * dt;
+    if (this.airborne) yaw *= CAR.AIR_YAW;
+    // steering right turns the car toward its right, which lowers the heading
+    this.heading -= yaw * dt;
 
     // lateral grip: how much sideways velocity is scrubbed off per second
     let grip = this.drifting ? CAR.GRIP_DRIFT : CAR.GRIP;
     if (this.offRoad) grip = Math.min(grip, CAR.OFF_GRIP);
+    if (this.airborne) grip = CAR.AIR_GRIP;
     vl *= Math.exp(-grip * dt);
 
     // rebuild world velocity around the new heading
@@ -107,12 +143,47 @@ export class Car {
     this.vel.copy(fwd).multiplyScalar(vf).addScaledVector(rgt, vl);
     this.pos.addScaledVector(this.vel, dt);
 
+    this.#vertical(track, dt);
     this.#wall(track, dt);
 
     this.lateral = vl;
     this.accel = dt > 0 ? (vf - prevVf) / dt : 0;
     this.wheelSpin += (vf / CAR.WHEEL_RADIUS) * dt;
     this.sync();
+  }
+
+  // Ground following and flight. The car leaves the ground exactly when
+  // staying on it would need more downward acceleration than gravity supplies
+  // - which is what a ramp lip does - and lands when it catches up again.
+  #vertical(track, dt) {
+    const groundY = track.surfaceHeight(this.pos.x, this.pos.z, this.hint);
+    this.groundY = groundY;
+
+    if (this.airborne) {
+      this.vy -= CAR.GRAVITY * dt;
+      this.pos.y += this.vy * dt;
+      this.pitch = Math.atan2(this.vy, Math.max(4, this.speed));
+      if (this.pos.y <= groundY) {
+        this.pos.y = groundY;
+        this.landed = this.airTime;
+        this.airTime = 0;
+        this.airborne = false;
+        this.vy = 0;
+        this.vel.multiplyScalar(1 - CAR.LAND_SCRUB);
+      }
+      return;
+    }
+
+    const needed = dt > 0 ? (groundY - this.pos.y) / dt : 0;
+    if (needed < this.vy - CAR.GRAVITY * dt) {
+      // the ground fell away faster than gravity can follow: take off
+      this.airborne = true;
+      this.airTime = 0;
+      this.pos.y += this.vy * dt;
+    } else {
+      this.vy = needed;
+      this.pos.y = groundY;
+    }
   }
 
   #wall(track, dt) {
@@ -135,14 +206,16 @@ export class Car {
   }
 
   sync() {
-    this.mesh.position.set(this.pos.x, 0, this.pos.z);
+    this.mesh.position.copy(this.pos);
     this.mesh.rotation.y = this.heading;
     if (this.tilt) {
-      // lean into the corner and squat under acceleration
-      const roll = clamp(-this.lateral * 0.012, -0.12, 0.12);
-      const pitch = clamp(-this.accel * 0.004, -0.06, 0.06);
-      this.tilt.rotation.z += (roll - this.tilt.rotation.z) * 0.2;
-      this.tilt.rotation.x += (pitch - this.tilt.rotation.x) * 0.2;
+      // body roll leans out of the corner; pitch follows the hill, plus a
+      // little squat under power. local +X is the car's left, so a right
+      // turn (positive steer) raises that side.
+      const lean = clamp(this.steer * Math.min(1, this.speed / 30) * 0.1, -0.1, 0.1);
+      const nose = clamp(-this.pitch - this.accel * 0.004, -0.35, 0.35);
+      this.tilt.rotation.z += (lean - this.tilt.rotation.z) * 0.15;
+      this.tilt.rotation.x += (nose - this.tilt.rotation.x) * 0.15;
     }
     if (this.frontWheels) this.frontWheels.rotation.y = this.steer * 0.5;
     for (const w of this.wheels) w.rotation.x = this.wheelSpin;
@@ -153,8 +226,8 @@ export class Car {
     const r = this.right();
     const f = this.forward();
     const back = -1.25, side = 0.95;
-    outA.set(this.pos.x, 0, this.pos.z).addScaledVector(f, back).addScaledVector(r, side);
-    outB.set(this.pos.x, 0, this.pos.z).addScaledVector(f, back).addScaledVector(r, -side);
+    outA.copy(this.pos).addScaledVector(f, back).addScaledVector(r, side);
+    outB.copy(this.pos).addScaledVector(f, back).addScaledVector(r, -side);
   }
 }
 
