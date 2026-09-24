@@ -203,7 +203,7 @@ async function loadTrack(nextDef, mode) {
   });
 
   hud.ghostState(state.mode === 'race'
-    ? `${race.fieldSize} cars · ${def.laps} laps`
+    ? `${race.fieldSize} cars · ${race.totalLaps} laps`
     : (state.best != null ? `ghost ${formatTime(state.best)}` : 'no ghost yet — set a lap'));
   el('standings').classList.toggle('hidden', state.mode !== 'race');
 }
@@ -339,7 +339,7 @@ function onLapLine() {
     hud.toast('lap invalid — cut the course', 'warn', 2.4);
   }
 
-  if (state.mode === 'race' && state.laps >= def.laps) { finishRace(); return; }
+  if (state.mode === 'race' && state.laps >= race.totalLaps) { finishRace(); return; }
 
   state.lapTime = 0;
   state.nextCp = 1;
@@ -358,7 +358,7 @@ function finishRace() {
   Stats.addRace(pos);
   state.phase = 'result';
 
-  el('result-kicker').textContent = `${def.name} · ${def.laps} laps`;
+  el('result-kicker').textContent = `${def.name} · ${race.totalLaps} laps`;
   el('result-place').textContent = pos === 1 ? 'WINNER' : `P${pos}`;
   const body = el('result-rows');
   body.textContent = '';
@@ -517,7 +517,7 @@ function updateStandings() {
   const order = race.order(playerProgress());
   const me = order.find((r) => r.you);
   el('race-pos').textContent = `${me.pos}/${order.length}`;
-  el('race-lap').textContent = `${Math.min(def.laps, state.laps + 1)}/${def.laps}`;
+  el('race-lap').textContent = `${Math.min(race.totalLaps, state.laps + 1)}/${race.totalLaps}`;
   const list = el('order-list');
   list.textContent = '';
   for (const r of order.slice(0, 7)) {
