@@ -1,9 +1,18 @@
 # Apex Drift
 
-A low-poly 3D kart time trial that runs in the browser. One circuit over rolling
-hills with two jump ramps, one clock: every lap you set is recorded and replayed
-as a translucent ghost car you race on the next lap, with a live delta against
-it.
+A low-poly 3D racing game that runs in the browser. Three circuits, two modes:
+time trial against the ghost of your own best lap, or a race from the back of a
+six-car grid.
+
+| Circuit | Length | Tightest corner | Character |
+| --- | --- | --- | --- |
+| Harbour Mile | 1418u | R27 | Easy — open sweepers, one chicane |
+| Ridgeline | 1263u | R23 | Medium — rolling hills, two jump ramps |
+| Pine Hollow | 1148u | R16 | Hard — tight, low, relentless |
+
+Circuits are data (`src/tracks.js`): control points, a height profile, a lap
+count and a palette. The difficulty labels are the measured tightest corner
+radius, not a guess.
 
 ## Play
 
@@ -78,6 +87,18 @@ Touch controls appear automatically on phones and tablets.
   barrier sparks. The whole effects layer is two draw calls. Camera shake is
   driven by landing force and barrier contact, and the speed vignette is a CSS
   overlay rather than a post-processing pass.
+- **Opponents** — six AI drivers (`src/ai.js`) run through the same `Car` and
+  the same physics the player does: no rubber-banding and no grip advantage.
+  They read the curvature ahead to choose a corner speed, take a line that
+  swings wide then tightens, and lift only when actually closing on a slower
+  car — reacting to mere proximity deadlocks a standing grid, where every car
+  brakes for the stationary one in front of it. Skill buys cornering
+  commitment as well as straight-line pace, which is what strings a field out
+  on a twisty circuit rather than leaving it nose-to-tail.
+- **Rivals and career** — `src/stats.js` keeps per-circuit bests and ghosts
+  plus career totals. The rival board is generated per circuit from its length
+  against a par lap, and your best is slotted in by time. Those rivals are
+  in-game content, not real players, and the board says so.
 - **Quality** — two tiers scale shadows, pixel ratio, scenery and particle
   counts (`src/settings.js`). The tier is guessed from the device on first run,
   corrected once if the first few seconds of racing cannot hold ~32fps, and

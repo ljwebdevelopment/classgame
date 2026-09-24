@@ -203,7 +203,7 @@ async function loadTrack(nextDef, mode) {
   });
 
   hud.ghostState(state.mode === 'race'
-    ? `${race.fieldSize} cars · ${race.totalLaps} laps`
+    ? `${race.fieldSize} cars · ${race.totalLaps} lap${race.totalLaps === 1 ? '' : 's'}`
     : (state.best != null ? `ghost ${formatTime(state.best)}` : 'no ghost yet — set a lap'));
   el('standings').classList.toggle('hidden', state.mode !== 'race');
 }
@@ -357,7 +357,8 @@ function finishRace() {
   Stats.addRace(pos);
   state.phase = 'result';
 
-  el('result-kicker').textContent = `${def.name} · ${race.totalLaps} laps`;
+  const n = race.totalLaps;
+  el('result-kicker').textContent = `${def.name} · ${n} lap${n === 1 ? '' : 's'}`;
   el('result-place').textContent = pos === 1 ? 'WINNER' : `P${pos}`;
   const body = el('result-rows');
   body.textContent = '';
