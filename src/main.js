@@ -317,7 +317,7 @@ function spawnEffects(dt) {
     skids.drop(_a.clone(), car.heading);
     skids.drop(_b.clone(), car.heading);
     // more smoke the harder the back end is actually sliding
-    const rate = car.drifting ? 110 : 70;
+    const rate = car.drifting ? 80 : 55;
     if (Math.random() < dt * rate) {
       effects.smoke(_p.copy(Math.random() < 0.5 ? _a : _b), car.heading, car.speed);
     }

@@ -94,7 +94,7 @@ export class Effects {
       transparent: true,
       depthWrite: false,
       blending: THREE.NormalBlending,
-      opacity: 0.55,
+      opacity: 0.42,
     }), quad);
     this.sparks = new Pool(scene, tier.sparks, new THREE.MeshBasicMaterial({
       map: softTexture(),
@@ -113,8 +113,8 @@ export class Effects {
       (Math.random() - 0.5) * 2.4 - Math.cos(heading) * amount * 0.1,
     );
     this.puffs.emit(p, this._v, {
-      life: 0.75 + Math.random() * 0.5,
-      size: 1.1, grow: 3.4, color: '#e8e4de', drag: 1.1,
+      life: 0.6 + Math.random() * 0.4,
+      size: 0.9, grow: 2.7, color: '#e8e4de', drag: 1.2,
     });
   }
 
