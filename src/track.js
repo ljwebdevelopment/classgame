@@ -46,6 +46,7 @@ export class Track {
       return (b - a) / (2 * this.segLen);
     });
 
+    this.grip = def.grip ?? 1;      // sand and ice hold less than tarmac
     this.wallLimit = TRACK.HALF_WIDTH + TRACK.WALL_MARGIN;
     this.kerbEdge = TRACK.HALF_WIDTH + TRACK.CURB_WIDTH;
     this.shoulder = this.wallLimit + 2;                    // flat ground ends

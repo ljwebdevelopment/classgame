@@ -183,68 +183,68 @@ function catchFence(track) {
 }
 
 // Grandstand and timing tower beside the start/finish straight.
+//
+// Everything is built inside a group placed at the start line and rotated to
+// the track, so local +Z runs ALONG the circuit and local +X runs across it.
+// Placing these in world space with a bare rotation.y put each box's WIDTH
+// across the track instead of along it, which walked the stand and its roof
+// out over the racing surface.
 function startComplex(track) {
-  const group = new THREE.Group();
   const f = track.frameAt(0.006);
-  const side = f.side, p = f.point, y = f.height;
-  const dirOut = -1;                                    // stand on the left
-  const base = TRACK.HALF_WIDTH + TRACK.BARRIER_OFFSET + 5;
+  const root = new THREE.Group();
+  root.position.set(f.point.x, f.height, f.point.z);
+  root.rotation.y = f.heading;
 
   const concrete = new THREE.MeshLambertMaterial({ color: '#9aa1a8' });
   const dark = new THREE.MeshLambertMaterial({ color: '#2f343b' });
   const seat = new THREE.MeshLambertMaterial({ color: '#3f6fa8' });
 
-  // tiered seating: each row steps back and up
+  const clear = TRACK.HALF_WIDTH + TRACK.BARRIER_OFFSET + 6;   // nearest edge
+  const length = 42;
+
+  const stand = new THREE.Group();
+  stand.position.x = -clear;            // to the left of the circuit
+  root.add(stand);
+
+  // tiered seating: each row steps further out and higher
   for (let row = 0; row < 6; row++) {
-    const w = 42;
-    const step = new THREE.Mesh(new THREE.BoxGeometry(w, 1.1, 2.2), row % 2 ? seat : concrete);
-    const outward = base + 2 + row * 2.1;
-    step.position.set(
-      p.x + side.x * outward * dirOut,
-      y + 0.55 + row * 1.0,
-      p.z + side.z * outward * dirOut,
-    );
-    step.rotation.y = f.heading;
+    const step = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 1.1, length), row % 2 ? seat : concrete);
+    step.position.set(-row * 2.1, 0.55 + row * 1.0, 0);
     step.castShadow = true;
     step.receiveShadow = true;
-    group.add(step);
+    stand.add(step);
   }
-  // roof
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(46, 0.5, 16), dark);
-  const roofOut = base + 9;
-  roof.position.set(
-    p.x + side.x * roofOut * dirOut, y + 9.5, p.z + side.z * roofOut * dirOut);
-  roof.rotation.y = f.heading;
+
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(16, 0.5, length + 4), dark);
+  roof.position.set(-5, 9.5, 0);
   roof.castShadow = true;
-  group.add(roof);
+  stand.add(roof);
+
   for (const d of [-1, 1]) {
     const col = new THREE.Mesh(new THREE.BoxGeometry(0.8, 9.5, 0.8), concrete);
-    const along = d * 21;
-    col.position.set(
-      p.x + side.x * (base + 15) * dirOut + f.tangent.x * along,
-      y + 4.75,
-      p.z + side.z * (base + 15) * dirOut + f.tangent.z * along,
-    );
-    group.add(col);
+    col.position.set(-11, 4.75, d * (length / 2 - 1));
+    stand.add(col);
   }
 
   // timing tower on the opposite side
-  const tower = new THREE.Mesh(new THREE.BoxGeometry(5, 14, 4), concrete);
-  const tOut = TRACK.HALF_WIDTH + TRACK.BARRIER_OFFSET + 5;
-  tower.position.set(p.x + side.x * tOut, y + 7, p.z + side.z * tOut);
-  tower.rotation.y = f.heading;
-  tower.castShadow = true;
-  group.add(tower);
+  const tower = new THREE.Group();
+  tower.position.x = clear + 1;
+  root.add(tower);
+
+  const shaft = new THREE.Mesh(new THREE.BoxGeometry(4, 14, 5), concrete);
+  shaft.position.y = 7;
+  shaft.castShadow = true;
+  tower.add(shaft);
 
   const glass = new THREE.Mesh(
-    new THREE.BoxGeometry(5.2, 3, 4.2),
+    new THREE.BoxGeometry(4.2, 3, 5.2),
     new THREE.MeshLambertMaterial({ color: '#2b3a4a' }),
   );
-  glass.position.set(p.x + side.x * tOut, y + 12, p.z + side.z * tOut);
-  glass.rotation.y = f.heading;
-  group.add(glass);
+  glass.position.y = 12;
+  tower.add(glass);
 
-  return group;
+  return root;
 }
 
 function clouds(count) {

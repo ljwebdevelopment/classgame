@@ -94,8 +94,10 @@ const IDLE = { steer: 0, throttle: 0, drift: false, stop: false };
 const _d = new THREE.Vector3();
 
 // Cheap equal-mass separation so cars bump and slide rather than overlap.
+// R is just over half the car's width, so they can run genuinely side by side
+// and only shove when sheet metal would actually meet.
 function separate(cars) {
-  const R = 2.6;
+  const R = 1.25;
   for (let i = 0; i < cars.length; i++) {
     for (let j = i + 1; j < cars.length; j++) {
       const a = cars[i], b = cars[j];
@@ -110,7 +112,7 @@ function separate(cars) {
       // trade a little speed along the contact normal
       const va = a.vel.dot(_d), vb = b.vel.dot(_d);
       if (va - vb > 0) {
-        const swap = (va - vb) * 0.5;
+        const swap = (va - vb) * 0.35;      // a nudge, not a billiard collision
         a.vel.addScaledVector(_d, -swap);
         b.vel.addScaledVector(_d, swap);
       }

@@ -87,7 +87,8 @@ class Pool {
 }
 
 export class Effects {
-  constructor(scene, tier) {
+  constructor(scene, tier, theme = {}) {
+    this.dust = theme.dust ?? '#8a7a52';
     const quad = new THREE.PlaneGeometry(1, 1);
     this.puffs = new Pool(scene, tier.puffs, new THREE.MeshBasicMaterial({
       map: softTexture(),
@@ -127,7 +128,7 @@ export class Effects {
     );
     this.puffs.emit(p, this._v, {
       life: 0.5 + Math.random() * 0.4,
-      size: 0.7, grow: 2.6, color: '#8a7a52', drag: 1.6,
+      size: 0.7, grow: 2.6, color: this.dust, drag: 1.6,
     });
   }
 
@@ -155,7 +156,7 @@ export class Effects {
       this._v.set(Math.cos(a) * 5, 0.8 + Math.random(), Math.sin(a) * 5);
       this.puffs.emit(p, this._v, {
         life: 0.5 + Math.random() * 0.3,
-        size: 0.9, grow: 3, color: '#cfc6b4', drag: 2.2,
+        size: 0.9, grow: 3, color: this.dust, drag: 2.2,
       });
     }
   }

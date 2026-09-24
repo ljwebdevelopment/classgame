@@ -55,9 +55,14 @@ export function grassTexture(repeat = 1, base = '#5f8f41') {
   const x = c.getContext('2d');
   x.fillStyle = base;
   x.fillRect(0, 0, 256, 256);
+  // Speckle in lighter and darker shades OF THE BASE, not a fixed green -
+  // a green fleck over snow just reads as moss.
+  const n = parseInt(base.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   for (let i = 0; i < 9000; i++) {
-    const g = 60 + Math.random() * 60;
-    x.fillStyle = `rgba(${g * 0.7},${g},${g * 0.45},${0.2 + Math.random() * 0.35})`;
+    const k = 0.72 + Math.random() * 0.5;
+    const px = (v) => Math.max(0, Math.min(255, Math.round(v * k)));
+    x.fillStyle = `rgba(${px(r)},${px(g)},${px(b)},${0.25 + Math.random() * 0.4})`;
     x.fillRect(Math.random() * 256, Math.random() * 256, 3, 3);
   }
   const tex = new THREE.CanvasTexture(c);
@@ -78,29 +83,79 @@ function ground(theme) {
   return mesh;
 }
 
+// Trackside planting. The shapes themselves change with the theme, so a
+// desert reads as a desert rather than as a green circuit with sand on it.
+function FLORA(kind, theme) {
+  switch (kind) {
+    case 'palm':
+      return {
+        trunk: new THREE.CylinderGeometry(0.22, 0.34, 7, 6),
+        trunkY: 3.5,
+        canopy: new THREE.ConeGeometry(3.2, 1.6, 7),
+        canopyY: 7.4,
+        cap: null,
+      };
+    case 'cactus':
+      return {
+        trunk: new THREE.CylinderGeometry(0.62, 0.72, 4.4, 7),
+        trunkY: 2.2,
+        canopy: new THREE.CylinderGeometry(0.42, 0.42, 2.0, 6),
+        canopyY: 3.4,
+        cap: null,
+        canopyOffset: 0.95,          // an arm off the side, not a crown on top
+      };
+    case 'snowpine':
+      return {
+        trunk: new THREE.CylinderGeometry(0.3, 0.44, 2.6, 6),
+        trunkY: 1.3,
+        canopy: new THREE.ConeGeometry(2.4, 6.4, 7),
+        canopyY: 5.8,
+        cap: new THREE.ConeGeometry(1.5, 2.6, 7),
+        capY: 8.2,
+      };
+    default:
+      return {
+        trunk: new THREE.CylinderGeometry(0.35, 0.5, 3, 6),
+        trunkY: 1.5,
+        canopy: new THREE.ConeGeometry(2.6, 7, 7),
+        canopyY: 6.5,
+        cap: null,
+      };
+  }
+}
+
 function foliage(track, tier, theme) {
   const group = new THREE.Group();
   const rand = rng(20260918);
   const clearance = track.shoulder + 3;
+  const kind = theme.flora ?? 'pine';
+  const shape = FLORA(kind, theme);
 
-  const trunkGeo = new THREE.CylinderGeometry(0.35, 0.5, 3, 6);
-  const leafGeo = new THREE.ConeGeometry(2.6, 7, 7);
-  const rockGeo = new THREE.IcosahedronGeometry(1.1, 0);
-  const trunkMat = new THREE.MeshLambertMaterial({ color: '#6b4a2f', flatShading: true });
+  const maxTrees = Math.round(tier.trees * (theme.density ?? 1));
+  const maxRocks = tier.rocks;
+  const maxBushes = Math.round(maxTrees * 0.5);
+
+  const trunkMat = new THREE.MeshLambertMaterial({
+    color: kind === 'cactus' ? theme.trees : (kind === 'palm' ? '#8a6a44' : '#6b4a2f'),
+    flatShading: true,
+  });
   const leafMat = new THREE.MeshLambertMaterial({ color: theme.trees, flatShading: true });
+  const capMat = new THREE.MeshLambertMaterial({ color: '#f2f7fb', flatShading: true });
+  const bushMat = new THREE.MeshLambertMaterial({ color: theme.bush, flatShading: true });
   const rockMat = new THREE.MeshLambertMaterial({ color: theme.rock, flatShading: true });
 
-  const maxTrees = tier.trees;
-  const maxRocks = tier.rocks;
-  const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, maxTrees);
-  const leaves = new THREE.InstancedMesh(leafGeo, leafMat, maxTrees);
-  const bushGeo = new THREE.IcosahedronGeometry(1.5, 0);
-  const bushMat = new THREE.MeshLambertMaterial({ color: theme.bush, flatShading: true });
-  const bushes = new THREE.InstancedMesh(bushGeo, bushMat, Math.round(maxTrees * 0.5));
-  const rocks = new THREE.InstancedMesh(rockGeo, rockMat, maxRocks);
+  const trunks = new THREE.InstancedMesh(shape.trunk, trunkMat, Math.max(1, maxTrees));
+  const leaves = new THREE.InstancedMesh(shape.canopy, leafMat, Math.max(1, maxTrees));
+  const caps = shape.cap
+    ? new THREE.InstancedMesh(shape.cap, capMat, Math.max(1, maxTrees)) : null;
+  const bushes = new THREE.InstancedMesh(
+    new THREE.IcosahedronGeometry(1.5, 0), bushMat, Math.max(1, maxBushes));
+  const rocks = new THREE.InstancedMesh(
+    new THREE.IcosahedronGeometry(1.1, 0), rockMat, Math.max(1, maxRocks));
   leaves.castShadow = true;
   bushes.castShadow = true;
   rocks.castShadow = true;
+  if (caps) caps.castShadow = true;
 
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -108,7 +163,6 @@ function foliage(track, tier, theme) {
   const pos = new THREE.Vector3();
   const scl = new THREE.Vector3();
 
-  const maxBushes = Math.round(maxTrees * 0.5);
   let trees = 0, stones = 0, shrubs = 0, tries = 0;
   while ((trees < maxTrees || stones < maxRocks || shrubs < maxBushes) && tries < 40000) {
     tries++;
@@ -120,12 +174,20 @@ function foliage(track, tier, theme) {
 
     if (trees < maxTrees && rand() < 0.62) {
       const s = 0.7 + rand() * 0.8;
-      q.setFromAxisAngle(up, rand() * Math.PI * 2);
+      const spin = rand() * Math.PI * 2;
+      q.setFromAxisAngle(up, spin);
       scl.set(s, s, s);
-      m.compose(pos.set(x, y + 1.5 * s, z), q, scl);
+      m.compose(pos.set(x, y + shape.trunkY * s, z), q, scl);
       trunks.setMatrixAt(trees, m);
-      m.compose(pos.set(x, y + 6.5 * s, z), q, scl);
+      const off = shape.canopyOffset ?? 0;
+      m.compose(pos.set(
+        x + Math.cos(spin) * off * s, y + shape.canopyY * s, z + Math.sin(spin) * off * s,
+      ), q, scl);
       leaves.setMatrixAt(trees, m);
+      if (caps) {
+        m.compose(pos.set(x, y + shape.capY * s, z), q, scl);
+        caps.setMatrixAt(trees, m);
+      }
       trees++;
     } else if (shrubs < maxBushes && rand() < 0.55) {
       const s = 0.6 + rand() * 0.9;
@@ -145,8 +207,12 @@ function foliage(track, tier, theme) {
   leaves.count = trees;
   bushes.count = shrubs;
   rocks.count = stones;
-  for (const m2 of [trunks, leaves, bushes, rocks]) m2.instanceMatrix.needsUpdate = true;
+  if (caps) caps.count = trees;
+  for (const im of [trunks, leaves, bushes, rocks, caps]) {
+    if (im) im.instanceMatrix.needsUpdate = true;
+  }
   group.add(trunks, leaves, bushes, rocks);
+  if (caps) group.add(caps);
   return group;
 }
 

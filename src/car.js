@@ -136,7 +136,7 @@ export class Car {
     this.heading -= yaw * dt;
 
     // lateral grip: how much sideways velocity is scrubbed off per second
-    let grip = this.drifting ? CAR.GRIP_DRIFT : CAR.GRIP;
+    let grip = (this.drifting ? CAR.GRIP_DRIFT : CAR.GRIP) * (track.grip ?? 1);
     if (this.offRoad) grip = Math.min(grip, CAR.OFF_GRIP);
     if (this.airborne) grip = CAR.AIR_GRIP;
     vl *= Math.exp(-grip * dt);

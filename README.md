@@ -4,11 +4,17 @@ A low-poly 3D racing game that runs in the browser. Three circuits, two modes:
 time trial against the ghost of your own best lap, or a race from the back of a
 six-car grid.
 
-| Circuit | Length | Tightest corner | Character |
-| --- | --- | --- | --- |
-| Harbour Mile | 1418u | R27 | Easy — open sweepers, one chicane |
-| Ridgeline | 1263u | R23 | Medium — rolling hills, two jump ramps |
-| Pine Hollow | 1148u | R16 | Hard — tight, low, relentless |
+| Circuit | Length | Tightest corner | Grip | Character |
+| --- | --- | --- | --- | --- |
+| Harbour Mile | 1418u | R27 | 1.00 | Easy — coastal, open sweepers, one chicane |
+| Dust Basin | 1346u | R38 | 0.88 | Medium — desert, fast, sand that will not hold |
+| Ridgeline | 1263u | R23 | 1.00 | Medium — alpine, rolling hills, two jump ramps |
+| Glacier Pass | 1221u | R17 | 0.76 | Hard — snow, least grip anywhere |
+| Pine Hollow | 1148u | R16 | 1.00 | Hard — deep forest, tight and relentless |
+
+Each circuit carries its own sky, fog, ground, flora (pines, palms, cacti,
+snow-laden pines), dust colour and surface grip, so they differ in how they
+look *and* how they drive.
 
 Circuits are data (`src/tracks.js`): control points, a height profile, a lap
 count and a palette. The difficulty labels are the measured tightest corner
@@ -89,12 +95,19 @@ Touch controls appear automatically on phones and tablets.
   overlay rather than a post-processing pass.
 - **Opponents** — six AI drivers (`src/ai.js`) run through the same `Car` and
   the same physics the player does: no rubber-banding and no grip advantage.
-  They read the curvature ahead to choose a corner speed, take a line that
-  swings wide then tightens, and lift only when actually closing on a slower
-  car — reacting to mere proximity deadlocks a standing grid, where every car
-  brakes for the stationary one in front of it. Skill buys cornering
+  They scan `18 + 1.7 x speed` units down the road, derive each corner's
+  speed from the radius its bend implies and how much grip they will lean on,
+  then solve `v² = u² + 2ad` for the fastest speed they can still be carrying
+  now — braking *for* a corner rather than reacting once in it. Their line
+  runs wide on entry and tightens to the apex, and they lift only when
+  actually closing on a slower car: reacting to mere proximity deadlocks a
+  standing grid, where every car brakes for the stationary one in front.
+- **Shape of a race** — skill spans 0.58 to 0.97 and buys cornering
   commitment as well as straight-line pace, which is what strings a field out
-  on a twisty circuit rather than leaving it nose-to-tail.
+  on a twisty circuit. Each driver also carries an `early` bonus that decays
+  over the race, so a charger can be the fastest car on track for the opening
+  laps and still be caught: R. Okonkwo tops out at 59.6 u/s on lap one against
+  V. Kasten's 58.2, and finishes behind him at 50.4 to 57.1.
 - **Rivals and career** — `src/stats.js` keeps per-circuit bests and ghosts
   plus career totals. The rival board is generated per circuit from its length
   against a par lap, and your best is slotted in by time. Those rivals are

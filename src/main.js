@@ -176,7 +176,7 @@ async function loadTrack(nextDef, mode) {
       label: fieldSize ? 'warming up the field' : 'rolling out the car', weight: 2,
       run: () => {
         skids = new SkidMarks(scene, tier.skids);
-        effects = new Effects(scene, tier);
+        effects = new Effects(scene, tier, nextDef.theme);
         car = new Car('#ff5a3c');
         ghostCar = new Car('#57e0ff', true);
         ghostCar.mesh.visible = false;
