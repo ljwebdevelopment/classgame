@@ -241,8 +241,7 @@ function applyQuality() {
 
 function resetToGrid() {
   if (state.mode === 'race') {
-    race.grid(car);
-    state.prevU = car.lapU ?? 0.98;
+    state.prevU = race.grid(car);
   } else {
     car.placeAt(track, GRID_U);
     state.prevU = GRID_U;

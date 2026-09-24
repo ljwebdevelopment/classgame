@@ -47,7 +47,9 @@ export class Race {
     this.time = 0;
     this.playerLap = 0;
     this.playerFinished = false;
+    this.playerFinishTime = null;
     this.finishers = [];
+    return mine.u;          // the caller seeds its crossing detector with this
   }
 
   update(dt, playerCar) {
