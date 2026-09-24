@@ -43,17 +43,33 @@ html, body {
 
 .screen.hidden { display: none; }
 
-.spinner {
-  width: 34px; height: 34px;
-  border: 3px solid rgba(255, 255, 255, 0.16);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 14px;
+/* the loader must sit above every other screen while it runs */
+#loading { z-index: 30; }
+#fatal { z-index: 40; }
+
+.loader { width: min(380px, 78vw); text-align: left; }
+.loader .eyebrow { margin: 0 0 14px; }
+.bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
 }
-#loading { flex-direction: column; }
-#loading p { color: var(--dim); font-size: 14px; letter-spacing: 0.06em; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--ghost));
+  transition: width 0.25s ease;
+}
+.load-label {
+  margin: 12px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
 
 .title-card {
   width: min(560px, 90vw);
@@ -72,6 +88,8 @@ html, body {
   text-transform: uppercase;
   color: var(--accent);
 }
+
+.title-card h1.small { font-size: clamp(26px, 5vw, 38px); margin-bottom: 18px; }
 
 .title-card h1 {
   margin: 0 0 12px;
@@ -259,4 +277,49 @@ kbd {
   .times { left: 10px; padding: 9px 12px; }
   .speedo { right: 10px; padding: 8px 12px; }
   .kph { font-size: 28px; }
+}
+
+/* ---------- pause menu ---------- */
+
+.menu { display: grid; gap: 9px; margin-bottom: 18px; }
+.menu .start { width: 100%; }
+
+.ghost-btn {
+  pointer-events: auto;
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  padding: 11px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink);
+  font: 500 13px/1 var(--sans);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.ghost-btn:hover { background: rgba(255, 255, 255, 0.11); border-color: rgba(255, 255, 255, 0.25); }
+
+.hint { margin: 0; font-size: 11px; letter-spacing: 0.1em; color: var(--dim); }
+
+/* ---------- speed vignette ---------- */
+
+#speed-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse 62% 52% at 50% 50%,
+      rgba(0, 0, 0, 0) 45%,
+      rgba(6, 8, 12, 0.55) 100%);
+  transition: opacity 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #speed-vignette { display: none; }
+  .bar-fill { transition: none; }
+  .toast { transition: none; }
+  .countdown.show { animation-duration: 0.01s; }
 }

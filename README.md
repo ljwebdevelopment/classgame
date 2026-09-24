@@ -26,6 +26,7 @@ python3 -m http.server 8000
 | `Shift` | handbrake drift |
 | `R` | rescue back onto the racing line |
 | `Enter` | restart the lap |
+| `Esc` / `P` | pause, settings and quality |
 | `M` | mute/unmute |
 | `C` | clear the stored best lap and ghost |
 
@@ -61,8 +62,27 @@ Touch controls appear automatically on phones and tablets.
   progress). A new best replaces the stored ghost in `localStorage`; lap
   progress in each sample is what makes the live `+/-` delta possible.
 - **Rendering** — Three.js, vendored in `vendor/` so the page has no external
-  runtime dependencies. All textures (asphalt, grass, start line) are generated
-  on a canvas at load, so there are no image assets to ship.
+  runtime dependencies. Every texture — asphalt, grass, start line, sponsor
+  banners, braking boards, catch fencing, clouds, particle sprites — is drawn
+  on a canvas at load, so there are no image assets to ship at all.
+- **Startup** — the build runs as labelled stages that yield to the browser
+  between each one (`src/loader.js`), so the progress bar paints instead of the
+  page freezing. The last stage calls `renderer.compile()`, which moves shader
+  compilation off the first frame and out of the opening corner.
+- **Detail** — trackside dressing is placed off measured curvature rather than
+  fixed distances: `findCorners()` in `src/props.js` reads the sampled tangents,
+  so tyre stacks and 100/50 braking boards land on the corners that actually
+  exist and on the correct side of them.
+- **Effects** — one instanced pool per blend mode (`src/particles.js`): soft
+  puffs for tyre smoke, grass spray and landing dust, additive specks for
+  barrier sparks. The whole effects layer is two draw calls. Camera shake is
+  driven by landing force and barrier contact, and the speed vignette is a CSS
+  overlay rather than a post-processing pass.
+- **Quality** — two tiers scale shadows, pixel ratio, scenery and particle
+  counts (`src/settings.js`). The tier is guessed from the device on first run,
+  corrected once if the first few seconds of racing cannot hold ~32fps, and
+  overridable from the pause menu. `prefers-reduced-motion` disables the
+  vignette, camera shake and the countdown animation.
 
 ## Deploying
 
@@ -77,16 +97,20 @@ npx vercel deploy --prod
 ## Layout
 
 ```
-index.html        page shell and HUD markup
-style.css         HUD, title screen and touch controls
-src/config.js     tuning constants and the track control points
+index.html        page shell, HUD, loading, pause and failure screens
+style.css         HUD, menus, touch controls, speed vignette
+src/config.js     tuning constants, track control points, height profile
 src/track.js      spline, road/kerb/barrier geometry, physics queries
-src/car.js        arcade kart physics and the car mesh
-src/scenery.js    sky, ground, trees, hills, skid marks
+src/car.js        arcade kart physics, car mesh and brake lights
+src/scenery.js    sky, ground, trees, bushes, hills, skid marks
+src/props.js      tyre stacks, banners, braking boards, grandstand, fence
+src/particles.js  instanced smoke, dirt, sparks and landing dust
 src/ghost.js      lap recording, playback and localStorage
 src/input.js      keyboard and touch input
 src/audio.js      synthesised engine and tyre noise
 src/hud.js        HUD formatting and updates
-src/main.js       scene setup, game loop, lap logic, camera
+src/loader.js     staged startup so the loading bar actually paints
+src/settings.js   quality tiers and persisted preferences
+src/main.js       scene setup, game loop, lap logic, camera, effects
 vendor/           Three.js (MIT), vendored
 ```

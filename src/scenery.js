@@ -10,11 +10,11 @@ function rng(seed) {
   };
 }
 
-export function buildWorld(scene, track) {
+export function buildWorld(scene, track, tier) {
   scene.fog = new THREE.Fog('#a9cbe6', 260, 900);
   scene.add(sky());
   scene.add(ground());
-  scene.add(foliage(track));
+  scene.add(foliage(track, tier));
   scene.add(hills());
   return scene;
 }
@@ -75,7 +75,7 @@ function ground() {
   return mesh;
 }
 
-function foliage(track) {
+function foliage(track, tier) {
   const group = new THREE.Group();
   const rand = rng(20260918);
   const clearance = track.shoulder + 3;
@@ -87,10 +87,16 @@ function foliage(track) {
   const leafMat = new THREE.MeshLambertMaterial({ color: '#2f7a42', flatShading: true });
   const rockMat = new THREE.MeshLambertMaterial({ color: '#8a8f96', flatShading: true });
 
-  const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, 300);
-  const leaves = new THREE.InstancedMesh(leafGeo, leafMat, 300);
-  const rocks = new THREE.InstancedMesh(rockGeo, rockMat, 90);
+  const maxTrees = tier.trees;
+  const maxRocks = tier.rocks;
+  const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, maxTrees);
+  const leaves = new THREE.InstancedMesh(leafGeo, leafMat, maxTrees);
+  const bushGeo = new THREE.IcosahedronGeometry(1.5, 0);
+  const bushMat = new THREE.MeshLambertMaterial({ color: '#3d8c4b', flatShading: true });
+  const bushes = new THREE.InstancedMesh(bushGeo, bushMat, Math.round(maxTrees * 0.5));
+  const rocks = new THREE.InstancedMesh(rockGeo, rockMat, maxRocks);
   leaves.castShadow = true;
+  bushes.castShadow = true;
   rocks.castShadow = true;
 
   const m = new THREE.Matrix4();
@@ -99,8 +105,9 @@ function foliage(track) {
   const pos = new THREE.Vector3();
   const scl = new THREE.Vector3();
 
-  let trees = 0, stones = 0, tries = 0;
-  while ((trees < 300 || stones < 90) && tries < 20000) {
+  const maxBushes = Math.round(maxTrees * 0.5);
+  let trees = 0, stones = 0, shrubs = 0, tries = 0;
+  while ((trees < maxTrees || stones < maxRocks || shrubs < maxBushes) && tries < 40000) {
     tries++;
     const x = (rand() - 0.5) * 760;
     const z = (rand() - 0.5) * 820;
@@ -108,7 +115,7 @@ function foliage(track) {
     if (Math.abs(loc.offset) < clearance) continue;
     const y = track.heightForOffset(loc.u, loc.offset);
 
-    if (trees < 300 && rand() < 0.78) {
+    if (trees < maxTrees && rand() < 0.62) {
       const s = 0.7 + rand() * 0.8;
       q.setFromAxisAngle(up, rand() * Math.PI * 2);
       scl.set(s, s, s);
@@ -117,7 +124,13 @@ function foliage(track) {
       m.compose(pos.set(x, y + 6.5 * s, z), q, scl);
       leaves.setMatrixAt(trees, m);
       trees++;
-    } else if (stones < 90) {
+    } else if (shrubs < maxBushes && rand() < 0.55) {
+      const s = 0.6 + rand() * 0.9;
+      q.setFromAxisAngle(up, rand() * Math.PI * 2);
+      m.compose(pos.set(x, y + 0.9 * s, z), q, scl.set(s, s * 0.75, s));
+      bushes.setMatrixAt(shrubs, m);
+      shrubs++;
+    } else if (stones < maxRocks) {
       const s = 0.6 + rand() * 1.4;
       q.setFromAxisAngle(up, rand() * Math.PI * 2);
       m.compose(pos.set(x, y + 0.5 * s, z), q, scl.set(s, s * 0.7, s));
@@ -127,11 +140,10 @@ function foliage(track) {
   }
   trunks.count = trees;
   leaves.count = trees;
+  bushes.count = shrubs;
   rocks.count = stones;
-  trunks.instanceMatrix.needsUpdate = true;
-  leaves.instanceMatrix.needsUpdate = true;
-  rocks.instanceMatrix.needsUpdate = true;
-  group.add(trunks, leaves, rocks);
+  for (const m2 of [trunks, leaves, bushes, rocks]) m2.instanceMatrix.needsUpdate = true;
+  group.add(trunks, leaves, bushes, rocks);
   return group;
 }
 

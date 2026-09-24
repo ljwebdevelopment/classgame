@@ -19,11 +19,40 @@
 <div id="ui">
 
   <div id="loading" class="screen">
-    <div class="spinner"></div>
-    <p>building the circuit…</p>
+    <div class="loader">
+      <p class="eyebrow">Apex Drift</p>
+      <div class="bar"><div id="load-bar" class="bar-fill"></div></div>
+      <p id="load-label" class="load-label">starting up</p>
+    </div>
   </div>
 
-  <div id="title-screen" class="screen">
+  <div id="fatal" class="screen hidden">
+    <div class="title-card">
+      <p class="eyebrow">Cannot start</p>
+      <h1 class="small">No WebGL</h1>
+      <p id="fatal-msg" class="blurb">
+        This browser could not open a 3D context, so the game cannot run.
+        Try a different browser, or enable hardware acceleration.
+      </p>
+    </div>
+  </div>
+
+  <div id="pause-screen" class="screen hidden">
+    <div class="title-card">
+      <p class="eyebrow">Paused</p>
+      <h1 class="small">APEX<span>DRIFT</span></h1>
+      <div class="menu">
+        <button id="resume-btn" class="start">RESUME</button>
+        <button id="pause-restart" class="ghost-btn">Restart lap</button>
+        <button id="pause-quality" class="ghost-btn">Quality: high</button>
+        <button id="pause-sound" class="ghost-btn">Sound: on</button>
+        <button id="pause-clear" class="ghost-btn">Clear best lap</button>
+      </div>
+      <p class="hint">Esc or P to resume</p>
+    </div>
+  </div>
+
+  <div id="title-screen" class="screen hidden">
     <div class="title-card">
       <p class="eyebrow">Low-poly time trial</p>
       <h1>APEX<span>DRIFT</span></h1>
@@ -37,10 +66,13 @@
         <li><kbd>Space</kbd> <span>stop</span> &nbsp; <kbd>Shift</kbd> <span>drift</span></li>
         <li><kbd>R</kbd> <span>rescue to track</span></li>
         <li><kbd>Enter</kbd> <span>restart lap</span></li>
+        <li><kbd>Esc</kbd> <span>pause &amp; settings</span></li>
         <li><kbd>M</kbd> <span>sound</span> &nbsp; <kbd>C</kbd> <span>clear ghost</span></li>
       </ul>
     </div>
   </div>
+
+  <div id="speed-vignette"></div>
 
   <div id="hud">
     <div class="panel times">

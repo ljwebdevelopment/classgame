@@ -19,6 +19,7 @@ export class Car {
     this.landed = 0;       // airtime of the jump just completed, for the HUD
     this.groundY = 0;
     this.pitch = 0;
+    this.braking = false;
     this.steer = 0;
     this.hint = null;
     this.drifting = false;
@@ -32,6 +33,7 @@ export class Car {
     this.tilt = this.mesh.getObjectByName('tilt');
     this.frontWheels = this.mesh.getObjectByName('frontWheels');
     this.wheels = this.mesh.userData.wheels;
+    this.lamps = this.mesh.userData.lamps ?? [];
   }
 
   get speed() { return Math.hypot(this.vel.x, this.vel.z); }
@@ -87,6 +89,7 @@ export class Car {
     if (this.airborne) {
       // no traction in mid-air: you keep the line you took off on
       this.airTime += dt;
+      this.braking = false;
     } else {
       // engine / brakes
       const power = this.offRoad ? CAR.OFF_ENGINE_SCALE : 1;
@@ -97,6 +100,7 @@ export class Car {
         else vf = Math.max(vf - CAR.REVERSE * power * dt, -CAR.MAX_REVERSE);
       }
 
+      this.braking = input.throttle < 0 || input.stop;
       // space: a dedicated stop, which never rolls back into reverse
       if (input.stop) {
         if (vf > 0) vf = Math.max(0, vf - CAR.HANDBRAKE * dt);
@@ -223,6 +227,9 @@ export class Car {
     }
     if (this.frontWheels) this.frontWheels.rotation.y = this.steer * 0.5;
     for (const w of this.wheels) w.rotation.x = this.wheelSpin;
+    for (const l of this.lamps) {
+      l.material.color.copy(this.braking ? BRIGHT_LAMP : DIM_LAMP);
+    }
   }
 
   // World positions of the two rear contact patches, for skid marks.
@@ -263,6 +270,20 @@ function buildCarMesh(color, ghost) {
   add(new THREE.BoxGeometry(0.16, 0.36, 0.45), dark, -0.7, 0.85, -1.85);
   add(new THREE.BoxGeometry(0.16, 0.36, 0.45), dark, 0.7, 0.85, -1.85);
 
+  // tail lights, unlit so they glow instead of taking the scene lighting
+  const lampGeo = new THREE.BoxGeometry(0.42, 0.16, 0.08);
+  const lamps = [];
+  for (const x of [-0.62, 0.62]) {
+    const lampMat = new THREE.MeshBasicMaterial({
+      color: DIM_LAMP, ...(ghost ? { transparent: true, opacity: 0.35 } : {}),
+    });
+    const lamp = new THREE.Mesh(lampGeo, lampMat);
+    lamp.position.set(x, 0.68, -1.92);
+    tilt.add(lamp);
+    lamps.push(lamp);
+  }
+  root.userData.lamps = lamps;
+
   const wheelGeo = new THREE.CylinderGeometry(
     CAR.WHEEL_RADIUS, CAR.WHEEL_RADIUS, 0.38, 12);
   wheelGeo.rotateZ(Math.PI / 2);
@@ -291,3 +312,6 @@ function buildCarMesh(color, ghost) {
   root.userData.wheels = wheels;
   return root;
 }
+
+const DIM_LAMP = new THREE.Color('#5a1410');
+const BRIGHT_LAMP = new THREE.Color('#ff3a24');
