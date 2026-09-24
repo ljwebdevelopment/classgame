@@ -9,18 +9,6 @@ export const TRACK = {
   BARRIER_OFFSET: 6.4, // where the visual barriers sit
   CHECKPOINTS: 8,      // sectors that must be taken in order for a valid lap
   EMBANKMENT: 30,      // grass slope carrying the raised roadbed down to ground
-
-  // Control points of the circuit, on the XZ plane. Closed centripetal
-  // Catmull-Rom loop: long start straight, fast right sweeper, a chicane,
-  // a wide far corner and a tight hairpin before the run back.
-  POINTS: [
-    [   0,  145], [  95,  138], [ 152,  112], [ 176,   58],
-    [ 150,   12], [ 100,   -8], [  58,  -34], [  74,  -82],
-    [ 132,  -96], [ 166, -136], [ 130, -178], [  58, -182],
-    [   8, -150], [  -6,  -98], [ -46,  -78], [ -96,  -94],
-    [-132,  -54], [-116,    2], [-152,   46], [-130,  102],
-    [ -68,  132],
-  ],
 };
 
 export const CAR = {
@@ -74,34 +62,3 @@ export const GHOST_HZ = 30;   // ghost recording rate
 // v2: ghost samples carry height now, so old flat-track ghosts are discarded
 export const STORAGE_KEY = 'apex-drift.best.v2';
 
-// Height profile around the lap as [progress, height, easing]. 'l' is a
-// straight slope (ramp faces), 's' a smoothstep (rolling hills). The last
-// keyframe must return to the height of the first - it is a closed loop.
-export const ELEVATION = [
-  [0.000,  0.0, 'l'],   // flat over the start line
-  [0.015,  0.0, 'l'],   // ramp one, take-off face (start straight, ~5 deg bend)
-  [0.040,  6.0, 'l'],   // lip
-  [0.052,  0.0, 's'],   // back side drops away
-  [0.180, 11.0, 's'],   // long climb
-  [0.300, 16.0, 's'],   // high point of the circuit
-  [0.420,  6.0, 's'],   // descent
-  [0.470,  3.0, 's'],   // approach levels out
-  [0.485,  3.0, 'l'],   // ramp two, take-off face (gentle kink, ~13 deg)
-  [0.508,  8.8, 'l'],   // lip
-  [0.520,  3.0, 's'],   // back side drops away
-  [0.640,  9.0, 's'],
-  [0.760, 14.0, 's'],
-  [0.880,  4.0, 's'],
-  [1.000,  0.0, 's'],
-];
-
-// Height at a normalised distance around the lap.
-export function elevationAt(u) {
-  u -= Math.floor(u);
-  let i = 0;
-  while (i < ELEVATION.length - 2 && ELEVATION[i + 1][0] <= u) i++;
-  const [u0, h0, ease] = ELEVATION[i];
-  const [u1, h1] = ELEVATION[i + 1];
-  const t = u1 > u0 ? (u - u0) / (u1 - u0) : 0;
-  return h0 + (h1 - h0) * (ease === 'l' ? t : t * t * (3 - 2 * t));
-}

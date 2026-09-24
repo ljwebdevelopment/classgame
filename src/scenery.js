@@ -11,22 +11,25 @@ function rng(seed) {
 }
 
 export function buildWorld(scene, track, tier) {
-  scene.fog = new THREE.Fog('#a9cbe6', 260, 900);
-  scene.add(sky());
-  scene.add(ground());
-  scene.add(foliage(track, tier));
-  scene.add(hills());
-  return scene;
+  const theme = track.theme;
+  scene.fog = new THREE.Fog(theme.fog, 260, 900);
+  const group = new THREE.Group();
+  group.add(sky(theme));
+  group.add(ground(theme));
+  group.add(foliage(track, tier, theme));
+  group.add(hills(theme));
+  scene.add(group);
+  return group;
 }
 
-function sky() {
+function sky(theme) {
   const geo = new THREE.SphereGeometry(1400, 24, 16);
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
     uniforms: {
-      top: { value: new THREE.Color('#3f86c9') },
-      bottom: { value: new THREE.Color('#cfe3f2') },
+      top: { value: new THREE.Color(theme.skyTop) },
+      bottom: { value: new THREE.Color(theme.skyBottom) },
     },
     vertexShader: `
       varying float vH;
@@ -46,11 +49,11 @@ function sky() {
   return m;
 }
 
-export function grassTexture(repeat = 1) {
+export function grassTexture(repeat = 1, base = '#5f8f41') {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
   const x = c.getContext('2d');
-  x.fillStyle = '#5f8f41';
+  x.fillStyle = base;
   x.fillRect(0, 0, 256, 256);
   for (let i = 0; i < 9000; i++) {
     const g = 60 + Math.random() * 60;
@@ -64,10 +67,10 @@ export function grassTexture(repeat = 1) {
   return tex;
 }
 
-function ground() {
+function ground(theme) {
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(2400, 2400),
-    new THREE.MeshLambertMaterial({ map: grassTexture(90) }),
+    new THREE.MeshLambertMaterial({ map: grassTexture(90, theme.grass) }),
   );
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = -0.02;
@@ -75,7 +78,7 @@ function ground() {
   return mesh;
 }
 
-function foliage(track, tier) {
+function foliage(track, tier, theme) {
   const group = new THREE.Group();
   const rand = rng(20260918);
   const clearance = track.shoulder + 3;
@@ -84,15 +87,15 @@ function foliage(track, tier) {
   const leafGeo = new THREE.ConeGeometry(2.6, 7, 7);
   const rockGeo = new THREE.IcosahedronGeometry(1.1, 0);
   const trunkMat = new THREE.MeshLambertMaterial({ color: '#6b4a2f', flatShading: true });
-  const leafMat = new THREE.MeshLambertMaterial({ color: '#2f7a42', flatShading: true });
-  const rockMat = new THREE.MeshLambertMaterial({ color: '#8a8f96', flatShading: true });
+  const leafMat = new THREE.MeshLambertMaterial({ color: theme.trees, flatShading: true });
+  const rockMat = new THREE.MeshLambertMaterial({ color: theme.rock, flatShading: true });
 
   const maxTrees = tier.trees;
   const maxRocks = tier.rocks;
   const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, maxTrees);
   const leaves = new THREE.InstancedMesh(leafGeo, leafMat, maxTrees);
   const bushGeo = new THREE.IcosahedronGeometry(1.5, 0);
-  const bushMat = new THREE.MeshLambertMaterial({ color: '#3d8c4b', flatShading: true });
+  const bushMat = new THREE.MeshLambertMaterial({ color: theme.bush, flatShading: true });
   const bushes = new THREE.InstancedMesh(bushGeo, bushMat, Math.round(maxTrees * 0.5));
   const rocks = new THREE.InstancedMesh(rockGeo, rockMat, maxRocks);
   leaves.castShadow = true;
@@ -147,10 +150,10 @@ function foliage(track, tier) {
   return group;
 }
 
-function hills() {
+function hills(theme) {
   const group = new THREE.Group();
   const rand = rng(77);
-  const mat = new THREE.MeshLambertMaterial({ color: '#6f94a8', flatShading: true });
+  const mat = new THREE.MeshLambertMaterial({ color: theme.hills, flatShading: true });
   for (let i = 0; i < 14; i++) {
     const a = (i / 14) * Math.PI * 2 + rand() * 0.3;
     const r = 700 + rand() * 260;

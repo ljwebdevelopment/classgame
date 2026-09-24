@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { TRACK, elevationAt } from './config.js';
+import { TRACK } from './config.js';
+import { elevationAt } from './tracks.js';
 import { grassTexture } from './scenery.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -11,8 +12,10 @@ const _b = new THREE.Vector3();
 // drives the road geometry and the physics queries, so what you see is exactly
 // what the car drives on.
 export class Track {
-  constructor() {
-    const pts = TRACK.POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z));
+  constructor(def) {
+    this.def = def;
+    this.theme = def.theme;
+    const pts = def.points.map(([x, z]) => new THREE.Vector3(x, 0, z));
     this.curve = new THREE.CatmullRomCurve3(pts, true, 'centripetal', 0.5);
     this.length = this.curve.getLength();
 
@@ -32,7 +35,7 @@ export class Track {
       this.points.push(p);
       this.tangents.push(t);
       this.sides.push(s);
-      this.heights.push(elevationAt(u));
+      this.heights.push(elevationAt(def, u));
     }
     this.segLen = this.length / n;
 
@@ -79,7 +82,7 @@ export class Track {
       index: bestI,
       u,
       offset: dx * s.x + dz * s.z,   // signed distance from the centreline
-      height: elevationAt(u),
+      height: elevationAt(this.def, u),
       slope: this.slopes[bestI],
       tangent: t,
       side: s,
@@ -90,7 +93,7 @@ export class Track {
   // Ground height anywhere in the world: flat across the roadbed, then an
   // embankment carrying it down to the surrounding ground.
   heightForOffset(u, offset) {
-    const h = elevationAt(u);
+    const h = elevationAt(this.def, u);
     const d = Math.abs(offset);
     if (d <= this.shoulder) return h;
     if (d >= this.foot) return 0;
@@ -111,7 +114,7 @@ export class Track {
     const j = (i + 1) % this.n;
     const k = f - Math.floor(f);
     const point = _a.copy(this.points[i]).lerp(this.points[j], k).clone();
-    point.y = elevationAt(u);
+    point.y = elevationAt(this.def, u);
     const tangent = _b.copy(this.tangents[i]).lerp(this.tangents[j], k).normalize().clone();
     const side = new THREE.Vector3().crossVectors(tangent, UP).normalize();
     return { point, tangent, side, height: point.y, heading: Math.atan2(tangent.x, tangent.z) };
@@ -199,7 +202,7 @@ export class Track {
   // Flat grass beside the road, then the embankment down to ground level.
   #verges() {
     const group = new THREE.Group();
-    const mat = new THREE.MeshLambertMaterial({ map: grassTexture() });
+    const mat = new THREE.MeshLambertMaterial({ map: grassTexture(1, this.theme.grass) });
     for (const dir of [1, -1]) {
       const flat = new THREE.Mesh(
         this.#ribbon(dir * this.kerbEdge, dir * this.shoulder,
