@@ -353,7 +353,7 @@ function onLapLine() {
 function finishRace() {
   race.playerFinished = true;
   race.playerFinishTime = race.time;
-  const order = race.order(state.laps + 1);
+  const order = race.order(playerProgress());
   const pos = order.find((r) => r.you).pos;
   Stats.addRace(pos);
   state.phase = 'result';
@@ -506,9 +506,15 @@ function updateCamera(dt) {
   sun.target.updateMatrixWorld();
 }
 
+// Distance covered on the same scale the AI reports, so the grid does not
+// read as the player being a lap up on the entire field.
+function playerProgress() {
+  return (state.started ? state.laps + 1 : 0) + (car.lapU ?? 0) - 1;
+}
+
 function updateStandings() {
   if (state.mode !== 'race' || !race) return;
-  const order = race.order(state.laps + (car.lapU ?? 0));
+  const order = race.order(playerProgress());
   const me = order.find((r) => r.you);
   el('race-pos').textContent = `${me.pos}/${order.length}`;
   el('race-lap').textContent = `${Math.min(def.laps, state.laps + 1)}/${def.laps}`;
@@ -566,7 +572,7 @@ function frame(now) {
     });
 
     // the vignette tightens with speed
-    if (!reduced) {
+    if (!reduced && vignette) {
       const want = Math.min(0.85, Math.max(0, (car.speed - 26) / 34));
       if (Math.abs(want - vignetteShown) > 0.08) {
         vignetteShown = want;

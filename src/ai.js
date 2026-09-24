@@ -75,16 +75,20 @@ export class Driver {
 
     // pick a speed for the corner that is coming, not the one under the wheels
     const hard = this.#bendAhead(track, loc.u, 0.055);
-    const ceiling = (34 + this.skill * 22) * (1 - Math.min(0.72, hard * 0.85));
-    const target = Math.max(15, ceiling);
+    const commit = 0.62 + this.skill * 0.38;        // how late they stay on it
+    const ceiling = (30 + this.skill * 26) * (1 - Math.min(0.75, hard * 0.9 / commit));
+    const target = Math.max(11 + this.skill * 9, ceiling);
     this.input.throttle = speed < target ? 1 : (speed > target + 4 ? -1 : 0);
     this.input.drift = false;
 
-    // do not drive through the car in front
+    // Do not drive through the car in front - but only react to one we are
+    // actually catching. Reacting to mere proximity deadlocks a standing grid.
     const ahead = this.#carAhead(cars, track, loc);
     if (ahead) {
-      this.input.throttle = Math.min(this.input.throttle, ahead.gap < 9 ? -1 : 0);
-      this.targetLane += ahead.side * 3;
+      const closing = speed - ahead.speed;
+      if (ahead.gap < 7 && closing > 0.5) this.input.throttle = -1;
+      else if (ahead.gap < 13 && closing > 3) this.input.throttle = Math.min(this.input.throttle, 0);
+      if (ahead.gap < 13) this.targetLane += ahead.side * 3;
     }
 
     car.update(dt, this.input, track);
@@ -101,7 +105,7 @@ export class Driver {
       const rel = _r.subVectors(other.pos, this.car.pos);
       if (rel.dot(fwd) < 2) continue;                // not actually ahead
       const side = rel.dot(this.car.right(_s)) > 0 ? -1 : 1;
-      if (!best || d < best.gap) best = { gap: d, side };
+      if (!best || d < best.gap) best = { gap: d, side, speed: other.speed };
     }
     return best;
   }
@@ -112,7 +116,7 @@ export class Driver {
       if (this.lap === 1) this.startedAt = time;
     }
     this.prevU = u;
-    this.progress = this.lap + u;
+    this.progress = this.lap + u - 1;
   }
 }
 

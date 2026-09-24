@@ -56,7 +56,7 @@ export class Race {
     for (const d of this.drivers) {
       if (d.finished) { d.car.update(dt, IDLE, this.track); continue; }
       d.update(dt, this.track, cars, this.time);
-      if (d.lap >= this.totalLaps && !d.finished) {
+      if (d.lap > this.totalLaps && !d.finished) {
         d.finished = true;
         d.finishTime = this.time;
         this.finishers.push(d);
