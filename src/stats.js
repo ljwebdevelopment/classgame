@@ -88,9 +88,10 @@ function seeded(str) {
   };
 }
 
-// A par lap for a circuit, from its measured length. Roughly what a clean,
-// unhurried lap comes out at, which anchors every generated time to it.
-export function parLap(track) { return track.length / 17.2; }
+// A par lap for a circuit, from its measured length. Anchored to what the
+// race field actually laps in, so the rival board and a race describe the
+// same car rather than drifting into separate universes.
+export function parLap(track) { return track.length / 21.5; }
 
 export function rivalBoard(track, def) {
   const rand = seeded(def.id);

@@ -83,7 +83,10 @@ export class Driver {
     // Early pace that bleeds away, so a charger can genuinely lead the
     // opening laps and come back to the field later.
     const surge = 1 + this.early * Math.exp(-raceFraction * 2.6);
-    const commit = (0.58 + this.skill * 0.46) * surge;
+    // A steep skill mapping on purpose. Corner speed goes as sqrt(commit), so
+    // a narrow commitment band collapses into a narrow lap-time band - which
+    // is exactly what happened when the whole field ran within 2.5s.
+    const commit = THREE.MathUtils.clamp(-0.10 + this.skill, 0.35, 1) * surge;
     const top = (26 + this.skill * 32) * surge;
 
     // aim further down the road the faster we are going
@@ -164,7 +167,11 @@ const _r = new THREE.Vector3();
 const _s = new THREE.Vector3();
 
 const BEND_SPAN = 0.02;      // fraction of a lap used to measure a corner
-const LATERAL_GRIP = 15;     // how hard a fully committed driver corners
+// Calibrated against measured lap time, not theory: at 15 the whole field
+// lapped Ridgeline in 29-31s - clean, on the racing line, and far beyond what
+// a person will drive against. Lap time runs roughly as 1/sqrt(grip), so a
+// third of that lands the field near 50-65s with room for a human to race.
+const LATERAL_GRIP = 6;      // how hard a fully committed driver corners
 const BRAKE_DECEL = 26;      // what they can scrub off per second of braking
 
 // A field with real spread, and different shapes of race. `early` is pace
