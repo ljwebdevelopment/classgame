@@ -102,12 +102,29 @@ Touch controls appear automatically on phones and tablets.
   runs wide on entry and tightens to the apex, and they lift only when
   actually closing on a slower car: reacting to mere proximity deadlocks a
   standing grid, where every car brakes for the stationary one in front.
-- **Shape of a race** — skill spans 0.58 to 0.97 and buys cornering
-  commitment as well as straight-line pace, which is what strings a field out
-  on a twisty circuit. Each driver also carries an `early` bonus that decays
-  over the race, so a charger can be the fastest car on track for the opening
-  laps and still be caught: R. Okonkwo tops out at 59.6 u/s on lap one against
-  V. Kasten's 58.2, and finishes behind him at 50.4 to 57.1.
+  Corner speed scales with the circuit's own grip, so they slow for sand and
+  ice instead of arriving at tarmac speed. Measured on Glacier Pass — the
+  lowest grip and tightest corners of the five — the whole field holds within
+  4.0 units of the centreline on a 6.5 unit half-width, with no off-road time
+  and no barrier contact.
+- **Shape of a race** — pace is a plain multiplier on whatever speed the
+  racing line allows, and every constant behind it was solved from measured
+  laps rather than derived. Three relationships were tried analytically first
+  and none held: lap time is not proportional to `1/sqrt(grip)`, nor to
+  `1/pace`, and no single exponent covers the curve, because at high pace the
+  cars start meeting their own top speed. Running two configurations and
+  taking the difference worked every time.
+
+  The field spans roughly 47 to 63 seconds on Ridgeline, and each driver
+  carries an `early` bonus that decays with race progress, so the order at the
+  end is not the order at the start:
+
+  | | lap 1 | settles to |
+  | --- | --- | --- |
+  | R. Okonkwo | 47.3s — leads | ~57s, fourth |
+  | V. Kasten | 50.1s | ~51s, wins |
+  | T. Halvorsen | 52.1s | ~60s |
+  | S. Nakamura | 57.0s | unchanged |
 - **Rivals and career** — `src/stats.js` keeps per-circuit bests and ghosts
   plus career totals. The rival board is generated per circuit from its length
   against a par lap, and your best is slotted in by time. Those rivals are
