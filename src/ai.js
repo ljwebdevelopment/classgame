@@ -54,7 +54,9 @@ export class Driver {
   #cornerSpeed(track, bend, commit) {
     const arc = track.length * BEND_SPAN;
     const radius = arc / Math.max(0.03, bend);
-    return Math.sqrt(LATERAL_GRIP * commit * radius);
+    // the surface matters: sand and ice hold less than tarmac, and a driver
+    // who ignores that arrives at every corner too fast to hold the line
+    return Math.sqrt(LATERAL_GRIP * commit * radius * (track.grip ?? 1));
   }
 
   // Look far enough down the road to stop for what is coming, and hold the
