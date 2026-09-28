@@ -171,10 +171,12 @@ const _s = new THREE.Vector3();
 
 const BEND_SPAN = 0.02;      // fraction of a lap used to measure a corner
 const BASE_TOP = 58;         // the car's own top speed, before pace is applied
-// Calibrated from measurement: the field lapped Ridgeline in ~37s at pace 1,
-// so these put the quickest near 50s and the slowest near 68s.
-const PACE_FLOOR = 0.545;
-const PACE_SLOPE = 0.50;
+// Fitted from two measured points rather than assumed: lap time came out
+// proportional to pace^-1.62, not 1/pace, because the multiplier scales corner
+// speeds too and a slow driver crawls through corners disproportionately.
+// These put the quickest near 51s and the slowest near 65s on Ridgeline.
+const PACE_FLOOR = 0.639;
+const PACE_SLOPE = 0.262;
 // Calibrated against measured lap time, not theory: at 15 the whole field
 // lapped Ridgeline in 29-31s - clean, on the racing line, and far beyond what
 // a person will drive against. Lap time runs roughly as 1/sqrt(grip), so a
@@ -187,9 +189,9 @@ const BRAKE_DECEL = 26;      // what they can scrub off per second of braking
 // caught, which makes the first two laps worth watching.
 export const FIELD = [
   { name: 'V. Kasten',    color: '#4fc3f7', skill: 0.97, early: 0.02 },
-  { name: 'R. Okonkwo',   color: '#ffd166', skill: 0.74, early: 0.20 },
-  { name: 'M. Delacroix', color: '#a78bfa', skill: 0.88, early: 0.04 },
-  { name: 'T. Halvorsen', color: '#4ade80', skill: 0.66, early: 0.17 },
+  { name: 'R. Okonkwo',   color: '#ffd166', skill: 0.74, early: 0.13 },
+  { name: 'M. Delacroix', color: '#a78bfa', skill: 0.88, early: 0.03 },
+  { name: 'T. Halvorsen', color: '#4ade80', skill: 0.66, early: 0.12 },
   { name: 'S. Nakamura',  color: '#fb7185', skill: 0.80, early: 0.00 },
-  { name: 'A. Petrov',    color: '#f0f4f8', skill: 0.58, early: 0.09 },
+  { name: 'A. Petrov',    color: '#f0f4f8', skill: 0.58, early: 0.06 },
 ];
