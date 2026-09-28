@@ -82,7 +82,7 @@ export class Driver {
 
     // Early pace that bleeds away, so a charger can genuinely lead the
     // opening laps and come back to the field later.
-    const surge = 1 + this.early * Math.exp(-raceFraction * 2.6);
+    const surge = 1 + this.early * Math.exp(-raceFraction * 1.6);
     // PACE is a plain multiplier on whatever speed the line allows, so lap
     // time moves as 1/pace and the field spreads predictably. Shaping the
     // spread through cornering alone did not work: only part of a lap is
@@ -189,9 +189,9 @@ const BRAKE_DECEL = 26;      // what they can scrub off per second of braking
 // caught, which makes the first two laps worth watching.
 export const FIELD = [
   { name: 'V. Kasten',    color: '#4fc3f7', skill: 0.97, early: 0.02 },
-  { name: 'R. Okonkwo',   color: '#ffd166', skill: 0.74, early: 0.13 },
-  { name: 'M. Delacroix', color: '#a78bfa', skill: 0.88, early: 0.03 },
-  { name: 'T. Halvorsen', color: '#4ade80', skill: 0.66, early: 0.12 },
-  { name: 'S. Nakamura',  color: '#fb7185', skill: 0.80, early: 0.00 },
-  { name: 'A. Petrov',    color: '#f0f4f8', skill: 0.58, early: 0.06 },
+  { name: 'R. Okonkwo',   color: '#ffd166', skill: 0.74, early: 0.24 },
+  { name: 'M. Delacroix', color: '#a78bfa', skill: 0.88, early: 0.04 },
+  { name: 'T. Halvorsen', color: '#4ade80', skill: 0.66, early: 0.22 },
+  { name: 'S. Nakamura',  color: '#fb7185', skill: 0.80, early: 0.0 },
+  { name: 'A. Petrov',    color: '#f0f4f8', skill: 0.58, early: 0.11 },
 ];
