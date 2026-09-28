@@ -21,7 +21,7 @@ export class Race {
       const spec = FIELD[i % FIELD.length];
       const car = new Car(spec.color);
       scene.add(car.mesh);
-      this.drivers.push(new Driver(car, spec.name, spec.skill));
+      this.drivers.push(new Driver(car, spec.name, spec.skill, spec.early));
     }
   }
 
@@ -57,7 +57,9 @@ export class Race {
     const cars = [playerCar, ...this.drivers.map((d) => d.car)];
     for (const d of this.drivers) {
       if (d.finished) { d.car.update(dt, IDLE, this.track); continue; }
-      d.update(dt, this.track, cars, this.time);
+      // how far through the race this driver is, so early pace can fade
+      const frac = Math.min(1, Math.max(0, d.progress / this.totalLaps));
+      d.update(dt, this.track, cars, this.time, frac);
       if (d.lap > this.totalLaps && !d.finished) {
         d.finished = true;
         d.finishTime = this.time;
