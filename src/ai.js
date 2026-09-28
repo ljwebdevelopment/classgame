@@ -189,9 +189,9 @@ const BRAKE_DECEL = 26;      // what they can scrub off per second of braking
 // caught, which makes the first two laps worth watching.
 export const FIELD = [
   { name: 'V. Kasten',    color: '#4fc3f7', skill: 0.97, early: 0.02 },
-  { name: 'R. Okonkwo',   color: '#ffd166', skill: 0.74, early: 0.24 },
+  { name: 'R. Okonkwo',   color: '#ffd166', skill: 0.74, early: 0.35 },
   { name: 'M. Delacroix', color: '#a78bfa', skill: 0.88, early: 0.04 },
-  { name: 'T. Halvorsen', color: '#4ade80', skill: 0.66, early: 0.22 },
+  { name: 'T. Halvorsen', color: '#4ade80', skill: 0.66, early: 0.3 },
   { name: 'S. Nakamura',  color: '#fb7185', skill: 0.80, early: 0.0 },
   { name: 'A. Petrov',    color: '#f0f4f8', skill: 0.58, early: 0.11 },
 ];
