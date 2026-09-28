@@ -83,11 +83,13 @@ export class Driver {
     // Early pace that bleeds away, so a charger can genuinely lead the
     // opening laps and come back to the field later.
     const surge = 1 + this.early * Math.exp(-raceFraction * 2.6);
-    // A steep skill mapping on purpose. Corner speed goes as sqrt(commit), so
-    // a narrow commitment band collapses into a narrow lap-time band - which
-    // is exactly what happened when the whole field ran within 2.5s.
-    const commit = THREE.MathUtils.clamp(-0.10 + this.skill, 0.35, 1) * surge;
-    const top = (26 + this.skill * 32) * surge;
+    // PACE is a plain multiplier on whatever speed the line allows, so lap
+    // time moves as 1/pace and the field spreads predictably. Shaping the
+    // spread through cornering alone did not work: only part of a lap is
+    // corner-limited, so a 1.8x commitment range came out as a 1.1x range in
+    // lap time and the whole field finished within four seconds.
+    const pace = (PACE_FLOOR + Math.max(0, this.skill - 0.58) * PACE_SLOPE) * surge;
+    const commit = THREE.MathUtils.clamp(-0.10 + this.skill, 0.35, 1);
 
     // aim further down the road the faster we are going
     const look = 0.005 + Math.min(0.014, speed / 3600);
@@ -115,7 +117,8 @@ export class Driver {
     const gain = 2.4 + this.skill * 1.2;
     this.input.steer = THREE.MathUtils.clamp(-err * gain, -1, 1);
 
-    const target = Math.max(12, this.#speedLimit(track, loc.u, speed, commit, top));
+    const limit = this.#speedLimit(track, loc.u, speed, commit, BASE_TOP);
+    const target = Math.max(11, limit * pace);
     this.input.throttle = speed < target ? 1 : (speed > target + 2.5 ? -1 : 0);
     this.input.drift = false;
 
@@ -167,6 +170,11 @@ const _r = new THREE.Vector3();
 const _s = new THREE.Vector3();
 
 const BEND_SPAN = 0.02;      // fraction of a lap used to measure a corner
+const BASE_TOP = 58;         // the car's own top speed, before pace is applied
+// Calibrated from measurement: the field lapped Ridgeline in ~37s at pace 1,
+// so these put the quickest near 50s and the slowest near 68s.
+const PACE_FLOOR = 0.545;
+const PACE_SLOPE = 0.50;
 // Calibrated against measured lap time, not theory: at 15 the whole field
 // lapped Ridgeline in 29-31s - clean, on the racing line, and far beyond what
 // a person will drive against. Lap time runs roughly as 1/sqrt(grip), so a
